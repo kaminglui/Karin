@@ -934,16 +934,36 @@ class OllamaLLM:
         hit = _routing_classify(user_text)
         if hit:
             return hit, False
-        # Classifier abstained. Try the continuation fallback — only
-        # meaningful when rescue is on AND history has a recent tool
-        # call we can carry forward.
+        # Classifier abstained. Try fallbacks — both require the rescue
+        # path to be enabled (otherwise we'd hint a tool the bridge
+        # can't force-fire).
         if not self.under_fire_rescue:
             return None, False
         from bridge.routing.classifier import (
-            _looks_like_continuation,
+            _last_assistant_text,
             _last_assistant_tool_call,
+            _looks_like_continuation,
+            detect_clarification_followup,
         )
         from bridge.routing.force_fire import FORCE_RESCUE_TOOLS
+
+        # Layer 2: clarification-followup. If the prior assistant reply
+        # asked for tool-scoped info (e.g. "what's your household
+        # composition?") and the current user reply is short, treat
+        # the message as the answer to that clarification. Catches the
+        # "Tell me about ALICE" → "Single, 1 person" misroute where
+        # the LoRA picked get_time without context awareness.
+        last_assistant_text = _last_assistant_text(self._history)
+        clarify_tool = detect_clarification_followup(last_assistant_text)
+        if clarify_tool and clarify_tool in FORCE_RESCUE_TOOLS:
+            short = len((user_text or "").split()) <= 12
+            if short:
+                return clarify_tool, True
+
+        # Layer 3: continuation fallback — re-use the prior turn's
+        # tool when the new prompt is a short follow-up phrasing
+        # ("how about X", "and Y"). Only fires when a tool actually
+        # ran in the prior turn (we have something to inherit).
         if not _looks_like_continuation(user_text or ""):
             return None, False
         prior = _last_assistant_tool_call(self._history)

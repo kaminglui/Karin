@@ -238,6 +238,96 @@ def _looks_like_continuation(text: str) -> bool:
     return False
 
 
+# Patterns that indicate the prior assistant turn asked for clarification
+# scoped to a specific tool. Each tuple is (tool_name, pattern). When the
+# prior assistant reply matches AND the current user message is short
+# (likely the answer), the turn routes to that tool — even if the
+# classifier doesn't hit on the current message in isolation.
+#
+# Why this exists: if the assistant asks "what's your household
+# composition?" and the user replies "Single, 1 person", the classifier
+# sees "Single, 1 person" with no match and the LoRA may misroute (e.g.
+# to get_time on "Single, 1 person"). This layer reads the prior reply
+# to recover the lost tool intent.
+#
+# Patterns are conservative — only match phrasings that ONLY appear in
+# tool-clarification questions, not generic prose. False positives just
+# nudge the routing toward a specific tool; the rescue's per-tool arg
+# extractor still has the final say (declines on bad/missing args).
+_CLARIFICATION_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = [
+    (
+        "alice",
+        re.compile(
+            r"(?:household\s+composition|"
+            r"single\s+adult\s+or\s+(?:family|couple)|"
+            r"how\s+many\s+(?:adults?|kids?|people|persons?|in\s+the\s+household)|"
+            r"(?:specify|provide|tell\s+me)\s+(?:how\s+many|the\s+composition)|"
+            r"compute\s+ALICE)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "get_weather",
+        re.compile(
+            r"(?:which\s+(?:city|location)|where\s+are\s+you|"
+            r"what\s+(?:city|location)|need\s+(?:a\s+)?location)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "get_time",
+        re.compile(
+            r"(?:which\s+(?:time\s*zone|timezone)|"
+            r"what\s+time\s*zone|need\s+(?:a\s+)?time\s*zone)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "wiki",
+        re.compile(
+            r"(?:more\s+specific|do\s+you\s+mean|narrow\s+down|which\s+\w+\s+do\s+you\s+mean)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "inflation",
+        re.compile(
+            r"(?:from\s+(?:which|what)\s+year|need\s+(?:a\s+)?(?:base\s+)?year|"
+            r"how\s+much\s+(?:in|was)\s+\$?\d|amount\s+to\s+convert)",
+            re.IGNORECASE,
+        ),
+    ),
+]
+
+
+def detect_clarification_followup(prior_assistant_reply: str | None) -> str | None:
+    """If the most recent assistant turn asked for tool-scoped clarification,
+    return the tool name. Used as a routing layer between the explicit
+    classifier hit and the continuation fallback — when the prior turn
+    asked for ALICE composition / weather location / etc., the next short
+    user message is the answer to that clarification.
+
+    Returns ``None`` when no clarification pattern matches.
+    """
+    if not prior_assistant_reply:
+        return None
+    for tool, pattern in _CLARIFICATION_PATTERNS:
+        if pattern.search(prior_assistant_reply):
+            return tool
+    return None
+
+
+def _last_assistant_text(history: list[dict] | None) -> str:
+    """Return the most recent assistant reply text, or empty string."""
+    if not history:
+        return ""
+    snapshot = list(history)
+    for msg in reversed(snapshot):
+        if msg.get("role") == "assistant":
+            return str(msg.get("content") or "")
+    return ""
+
+
 def _last_assistant_tool_call(history: list[dict] | None) -> str | None:
     """Scan chat history backwards for the most recent assistant
     ``tool_calls`` entry and return that tool's name. Walks past

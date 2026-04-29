@@ -1,3 +1,50 @@
+# Changes — 2026-04-29 (clarification-followup routing + reply cap bump)
+
+## Clarification-followup routing layer
+
+- **New `detect_clarification_followup()`** in
+  `bridge/routing/classifier.py`. Reads the prior assistant reply
+  and, when it asked a tool-scoped clarification ("what's your
+  household composition?", "where are you?", "which time zone?"),
+  returns the tool name. Five tools wired:
+  `alice` / `get_weather` / `get_time` / `wiki` / `inflation`.
+  Patterns are conservative — only match phrasings that ONLY
+  appear in tool-clarification questions, not generic prose.
+- **`_resolve_hint_tool()` gains a layer 2**
+  (`bridge/llm.py`): between the explicit classifier hit and the
+  continuation fallback, check if the prior assistant turn asked
+  for clarification AND the user's reply is short (≤ 12 words).
+  If both, route to the clarification's tool. Catches the
+  "tell me about ALICE" → "Single, 1 person" misroute observed
+  2026-04-29, where the bare `Single, 1 person` had no classifier
+  match and the LoRA picked `get_time(timezone="Single, 1 person")`.
+- **`default_args_continuation()` extended** with `alice`,
+  `inflation`, `facts`, `population` branches
+  (`bridge/routing/force_fire.py`). The regular `default_args`
+  path applies keyword guards (require "ALICE" / "inflation" /
+  etc. in user text) to prevent misroutes when the classifier
+  mistakenly hints. The continuation path bypasses those guards
+  because by definition we *know* the prior turn established the
+  intent — the user's short reply is the answer.
+- **25 unit tests** in
+  `bridge/routing/tests/test_clarification_followup.py` covering
+  pattern matches per tool, benign-reply non-matches,
+  `_last_assistant_text()` history walking, alice continuation
+  args (size/composition/empty-default), `inflation`/`facts`
+  declines on missing required args, and the unrescuable-tool
+  guard.
+
+## Reply cap bump (mid-word truncation fix)
+
+- **`config/assistant.yaml` `llm.options.num_predict`**:
+  `80 → 300`. The cap was tuned for terse 1-sentence voice
+  replies, but multi-paragraph explanations (observed: an ALICE
+  threshold breakdown reply) hit the cap mid-word. The system
+  prompt + LoRA still bias toward terse replies; 300 just gives
+  headroom for the rare longer answer instead of cutting it off.
+  Voice TTS pays for the extra latency only when the model
+  actually generates 200+ tokens.
+
 # Changes — 2026-04-29 (system-prompt-rule leak scrub)
 
 ## New `PROMPT_LEAK_MARKERS` patterns

@@ -289,6 +289,13 @@ def default_args_continuation(tool: str, user_text: str) -> dict | None:
     is the sole substantive content. That payload drops directly into the
     tool's primary arg — no need for "in/at/for" anchoring.
 
+    Also covers the clarification-followup path (when the prior assistant
+    turn asked for tool-scoped info like "what's your household
+    composition?" and the user is answering): tools that gate their
+    main `default_args` behind a keyword guard re-route here so the
+    guard doesn't reject the answer ("Single, 1 person" has no ALICE
+    keyword but IS a valid composition).
+
     Returns ``None`` when the tool isn't force-safe or the payload is empty
     (e.g. a bare "how about?" with no content).
     """
@@ -311,6 +318,32 @@ def default_args_continuation(tool: str, user_text: str) -> dict | None:
         return {"query": payload}
     if tool in ("get_alerts", "get_digest"):
         return {}
+    if tool == "alice":
+        # Clarification-followup path: user is answering "what's your
+        # household composition?". Extract directly from the original
+        # user_text (not the stripped payload — composition phrases
+        # like "Single, 1 person" survive without continuation
+        # markers). Empty extraction is still a valid call (alice has
+        # sensible defaults), so don't decline on no match.
+        from bridge.tools._alice import extract_alice_args
+        return extract_alice_args(user_text) or {}
+    if tool == "inflation":
+        from bridge.tools._inflation import extract_inflation_args
+        ext = extract_inflation_args(user_text)
+        # Inflation needs a from_year to be meaningful; decline if the
+        # follow-up answer didn't include one.
+        if not ext.get("from_year"):
+            return None
+        return ext
+    if tool == "facts":
+        from bridge.tools._facts import extract_facts_args
+        ext = extract_facts_args(user_text)
+        if not ext.get("year"):
+            return None
+        return ext
+    if tool == "population":
+        from bridge.tools._population import extract_population_args
+        return extract_population_args(user_text) or {}
     return None
 
 

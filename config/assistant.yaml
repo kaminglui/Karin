@@ -106,10 +106,15 @@ llm:
   # new regressions. Set false to revert.
   hint_in_user_msg: true
   options:
-    # Hard cap on generated tokens — ~80 ≈ 60 words, enough for a
-    # one-sentence Karin reply without room for a data dump. Reliable
-    # brevity lever when the model won't obey a word-count rule.
-    num_predict: 80
+    # Hard cap on generated tokens. Voice replies stay terse by way of
+    # the system prompt's "ONE sentence ≤15 words" rule + LoRA training,
+    # so the bulk of replies finish well under this. Cap exists for
+    # cases where the LoRA ignores the brevity rule (explanations,
+    # multi-part answers) — bumped from 80 to 300 on 2026-04-29 after
+    # an ALICE explanation reply truncated mid-word at 80 tokens. 300
+    # is enough for a 3-paragraph answer; voice TTS pays for the extra
+    # latency only when the model actually generates that much.
+    num_predict: 300
   system_prompt: |
     You are Karin, a casual JK voice assistant. Bass player, likes cute
     things and double fromage, hates matcha. Friends: Rikka, Chifuyu.
