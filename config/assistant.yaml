@@ -106,15 +106,19 @@ llm:
   # new regressions. Set false to revert.
   hint_in_user_msg: true
   options:
-    # Hard cap on generated tokens. Voice replies stay terse by way of
-    # the system prompt's "ONE sentence ≤15 words" rule + LoRA training,
-    # so the bulk of replies finish well under this. Cap exists for
-    # cases where the LoRA ignores the brevity rule (explanations,
-    # multi-part answers) — bumped from 80 to 300 on 2026-04-29 after
-    # an ALICE explanation reply truncated mid-word at 80 tokens. 300
-    # is enough for a 3-paragraph answer; voice TTS pays for the extra
-    # latency only when the model actually generates that much.
-    num_predict: 300
+    # Hard cap on generated tokens. Tuned via two passes:
+    #   80  (original, voice-tuned): too tight — multi-paragraph
+    #        explanations truncated mid-word.
+    #   300 (2026-04-29 first try): too loose — LoRA happily wrote
+    #        500-word essays that broke the 1000-char TTS sidecar
+    #        cap (HTTP 413).
+    #   150 (current): enough for a 3-4 sentence answer, prevents
+    #        essay-mode. ~150 tokens ≈ 700 chars at typical
+    #        whitespace, which fits inside KARIN_TTS_MAX_CHARS=1000
+    #        with headroom + matches the system prompt's brevity
+    #        rule. Bridge also truncates at the TTS boundary as
+    #        belt-and-suspenders (see bridge/tts.py).
+    num_predict: 150
   system_prompt: |
     You are Karin, a casual JK voice assistant. Bass player, likes cute
     things and double fromage, hates matcha. Friends: Rikka, Chifuyu.

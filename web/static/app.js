@@ -566,6 +566,94 @@ function turnAddToolCall(turnObj, name, args, result) {
     turnObj.toolTrace.hidden = false;
 }
 
+// ---- Markdown rendering for assistant replies ---------------------------
+//
+// The LoRA emits markdown shapes (`**bold**`, `*italic*`, `` `code` ``,
+// numbered lists, paragraph breaks) but the chat used to render them as
+// raw text. This converts a small, safe subset to HTML.
+//
+// Why inline (no marked.js dep): chat replies use ~6 markdown shapes;
+// pulling in a 30 KB library to handle the rest isn't worth the weight
+// + audit surface. The escape-first → pattern-replace approach handles
+// the LoRA's actual output without exposing an XSS path (raw HTML in
+// the input is escaped before patterns run).
+
+const _MD_ESC_MAP = {
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;",
+};
+function _mdEscape(s) {
+    return String(s).replace(/[&<>"']/g, (c) => _MD_ESC_MAP[c]);
+}
+
+function _renderMarkdown(text) {
+    if (!text) return "";
+    // 1. HTML-escape the input. Everything below operates on already-
+    //    escaped text, so injected `<script>` becomes literal text.
+    let s = _mdEscape(text);
+    // 2. Fenced code blocks (```...```). Process before inline code so
+    //    the inner backticks don't get re-matched.
+    s = s.replace(/```([\s\S]*?)```/g, (_, code) =>
+        `<pre><code>${code.trim()}</code></pre>`);
+    // 3. Inline code (`...`). Non-greedy so `a` `b` parses as two spans.
+    s = s.replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+    // 4. Bold (**...** or __...__). Ordered before italic so `**b**`
+    //    isn't half-eaten as `*b*`.
+    s = s.replace(/\*\*([^*\n][^*]*?)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/__([^_\n][^_]*?)__/g, "<strong>$1</strong>");
+    // 5. Italic (*...* or _..._). Don't match across newlines.
+    s = s.replace(/(?<![*\w])\*(?!\s)([^*\n]+?)(?<!\s)\*(?!\w)/g, "<em>$1</em>");
+    s = s.replace(/(?<![_\w])_(?!\s)([^_\n]+?)(?<!\s)_(?!\w)/g, "<em>$1</em>");
+    // 6. Inline links [text](url). Pattern restricts URLs to http(s)
+    //    or relative — no `javascript:` allowed.
+    s = s.replace(
+        /\[([^\]\n]+?)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener">$1</a>',
+    );
+    // 7. Headers — only at start of line. Process line-by-line so
+    //    a "#" mid-paragraph isn't interpreted as a heading.
+    s = s.split("\n").map((line) => {
+        const h = line.match(/^(#{1,3})\s+(.+)$/);
+        if (h) {
+            const level = h[1].length;
+            return `<h${level + 2}>${h[2]}</h${level + 2}>`;
+        }
+        return line;
+    }).join("\n");
+    // 8. Bullet lists. Detect contiguous "- " or "* " lines and wrap
+    //    in <ul>. Numeric "1. ..." → <ol>. Lookahead avoids matching
+    //    a single isolated "- " that's actually em-dash phrasing.
+    s = s.replace(
+        /(?:^|\n)((?:[-*]\s+.+(?:\n|$))+)/g,
+        (_, block) => {
+            const items = block.trim().split("\n").map((l) =>
+                `<li>${l.replace(/^[-*]\s+/, "")}</li>`,
+            ).join("");
+            return `\n<ul>${items}</ul>`;
+        },
+    );
+    s = s.replace(
+        /(?:^|\n)((?:\d+\.\s+.+(?:\n|$))+)/g,
+        (_, block) => {
+            const items = block.trim().split("\n").map((l) =>
+                `<li>${l.replace(/^\d+\.\s+/, "")}</li>`,
+            ).join("");
+            return `\n<ol>${items}</ol>`;
+        },
+    );
+    // 9. Paragraph breaks (blank line) → close + reopen <p>. Single
+    //    newlines stay as <br> within a paragraph.
+    const paragraphs = s.split(/\n\s*\n/).map((p) => {
+        p = p.trim();
+        if (!p) return "";
+        // Already a block-level element from earlier passes? Don't
+        // wrap in <p> — yields invalid nesting.
+        if (/^<(?:h[2-5]|ul|ol|pre|blockquote)/.test(p)) return p;
+        return `<p>${p.replace(/\n/g, "<br>")}</p>`;
+    });
+    return paragraphs.filter(Boolean).join("");
+}
+
 function turnFinalizeAssistant(turnObj, assistantText) {
     if (turnObj.thinkingEl && turnObj.thinkingEl.parentNode) {
         turnObj.thinkingEl.remove();
@@ -577,7 +665,11 @@ function turnFinalizeAssistant(turnObj, assistantText) {
         at.className = "text";
         turnObj.asstBubble.appendChild(at);
     }
-    at.textContent = assistantText;
+    // Render markdown for the finalized reply. Streaming uses
+    // textContent (partial markdown like `**bo` looks bad mid-stream);
+    // finalize swaps to parsed HTML so bold / lists / code render.
+    at.innerHTML = _renderMarkdown(assistantText);
+    at.dataset.raw = assistantText;  // keep raw for copy button
     turnObj.asstTextNode = at;
     // Copy button belongs on every real reply bubble. It's idempotent
     // so we can safely call it on re-renders (history restore, etc.).
@@ -588,7 +680,9 @@ function turnFinalizeAssistant(turnObj, assistantText) {
 
 function turnAppendAssistantText(turnObj, delta) {
     // Append a streaming token chunk. Lazily creates the text node on
-    // the first delta (turnFinalizeAssistant("") sets it up).
+    // the first delta (turnFinalizeAssistant("") sets it up). Streaming
+    // uses textContent — partial markdown like "**bo" would render as
+    // a half-open <strong>, which looks worse than the raw asterisks.
     if (!turnObj.asstTextNode) {
         turnFinalizeAssistant(turnObj, "");
     }
@@ -604,7 +698,8 @@ function turnReplaceAssistantText(turnObj, fullText) {
         turnFinalizeAssistant(turnObj, fullText);
         return;
     }
-    turnObj.asstTextNode.textContent = fullText;
+    turnObj.asstTextNode.innerHTML = _renderMarkdown(fullText);
+    turnObj.asstTextNode.dataset.raw = fullText;
 }
 
 function attachFeedbackButtons(turnObj) {
@@ -809,8 +904,13 @@ function addCopyButton(bubble) {
         e.stopPropagation();
         // Read the FINAL text element specifically. Skips the thinking
         // indicator, copy button itself, and any other bubble chrome.
+        // Prefer dataset.raw (the unparsed markdown source) so users
+        // copy "**bold**" not "bold" — useful when the reply is being
+        // pasted into another markdown-aware target.
         const textEl = bubble.querySelector(".text");
-        const text = textEl ? textEl.textContent : bubble.textContent;
+        const text = textEl
+            ? (textEl.dataset.raw || textEl.textContent)
+            : bubble.textContent;
         const payload = (text || "").trim();
         if (!payload) return;
         try {

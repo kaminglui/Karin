@@ -200,6 +200,21 @@ class SoVITSTTS:
         if not text.strip():
             raise ValueError("synthesize() received empty text")
 
+        # Truncate at the sidecar boundary (KARIN_TTS_MAX_CHARS=1000 on
+        # the PC sidecar). Without this guard, a longer reply produces
+        # HTTP 413 ("text too long for sidecar TTS"); with it, we
+        # synthesize the first ~950 chars + an ellipsis. The chat UI
+        # still shows the full reply — only the spoken audio is
+        # truncated. The 50-char headroom covers prompt-injected
+        # punctuation that can push past the sidecar's exact cap.
+        _MAX_TTS_CHARS = 950
+        if len(text) > _MAX_TTS_CHARS:
+            text = text[: _MAX_TTS_CHARS].rstrip() + "…"
+            log.info(
+                "TTS truncating reply from %d to %d chars for sidecar",
+                len(text), _MAX_TTS_CHARS,
+            )
+
         # Retry weight loading if __init__ couldn't reach the backend.
         # swallow_connection_errors=False so this raises TTSError cleanly
         # if GPT-SoVITS is still down when the first TTS call arrives.
@@ -272,6 +287,16 @@ class SoVITSTTS:
 
         if not text.strip():
             raise ValueError("synthesize_stream() received empty text")
+
+        # Same sidecar-boundary truncation as synthesize() — see that
+        # method for rationale.
+        _MAX_TTS_CHARS = 950
+        if len(text) > _MAX_TTS_CHARS:
+            text = text[: _MAX_TTS_CHARS].rstrip() + "…"
+            log.info(
+                "TTS streaming: truncating reply to %d chars for sidecar",
+                _MAX_TTS_CHARS,
+            )
 
         # See synthesize() above — retry weight loading on first use in
         # case the backend wasn't up at __init__.

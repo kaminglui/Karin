@@ -1,3 +1,51 @@
+# Changes — 2026-04-29 (markdown rendering + reply-length tuning + TTS truncation)
+
+## Chat now renders markdown
+
+- **`_renderMarkdown(text)` helper** added to `web/static/app.js`.
+  Inline parser, no library dependency (~50 lines). HTML-escapes
+  the input first, then translates the LoRA's actual output shapes:
+  fenced code blocks (```` ``` ````), inline `` `code` ``, `**bold**`,
+  `*italic*`, `[text](url)` links restricted to `http(s)://` and
+  relative paths (no `javascript:` injection), `# / ## / ###`
+  headers, `- item` / `1. item` bullet lists, and paragraph
+  breaks. XSS-safe because every input character runs through
+  `_mdEscape` before any pattern replacement.
+- **Streaming stays as `textContent`**; finalize swaps to
+  `innerHTML`. Partial markdown like `"**bo` mid-stream would
+  render as a half-open `<strong>` tag, which looks worse than the
+  raw asterisks. The token append (`turnAppendAssistantText`) keeps
+  using `textContent`; once streaming is done, `turnFinalizeAssistant`
+  + `turnReplaceAssistantText` re-render via `innerHTML`.
+- **Copy button preserves raw markdown** via a new `data-raw`
+  dataset attribute. Users copying the reply get `**bold**` not
+  `bold` — useful when pasting into another markdown-aware target.
+- **CSS for the new elements** (`web/static/style.css`): tight
+  paragraph margins, subtle background on `<code>` / `<pre>`,
+  monospace font, list indent, link styling that matches the
+  bubble's chrome rather than browser default blue.
+
+## Reply-length tuning (the cap from yesterday was wrong direction)
+
+- **`config/assistant.yaml` `num_predict`**: `300 → 150`. The 80
+  → 300 bump from the morning fixed the cut-off but went too far
+  — observed: ~500-word ALICE explanations that hit the **TTS
+  sidecar's** 1000-char limit (`KARIN_TTS_MAX_CHARS=1000`) and
+  produced HTTP 413 from the PC voice server. 150 tokens
+  (~700 chars typical whitespace) lands inside the TTS budget
+  with headroom + matches the system prompt's brevity rule.
+
+## TTS-side truncation guard
+
+- **`bridge/tts.py::synthesize` + `synthesize_stream` truncate
+  to 950 chars** before posting to the PC sidecar. Belt-and-
+  suspenders against the LoRA exceeding `num_predict` (which can
+  happen if the cap is bumped at runtime) or against future
+  template-substitution growth. The chat UI still shows the full
+  reply — only the spoken audio is truncated, and a single log
+  line records the truncation:
+  `TTS truncating reply from 1334 to 950 chars for sidecar`.
+
 # Changes — 2026-04-29 (clarification-followup routing + reply cap bump)
 
 ## Clarification-followup routing layer

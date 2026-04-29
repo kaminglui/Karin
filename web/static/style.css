@@ -1188,6 +1188,61 @@ body.sun-mode .ptt-wrap.speaking .aura-2 {
     min-width: 0;
 }
 
+/* Markdown-rendered children inside assistant replies. The renderer
+ * (_renderMarkdown in app.js) emits <p>, <ul>/<ol>, <code>/<pre>,
+ * <strong>/<em>, <h3>/<h4>, <a>. Tighten the default browser margins
+ * so a list inside a chat bubble doesn't look like a bullet-pointed
+ * essay, and give code blocks a subtle background so they read as
+ * code without screaming for attention. */
+.bubble.assistant .text > p {
+    margin: 0 0 0.5em 0;
+}
+.bubble.assistant .text > p:last-child {
+    margin-bottom: 0;
+}
+.bubble.assistant .text > h3,
+.bubble.assistant .text > h4,
+.bubble.assistant .text > h5 {
+    margin: 0.5em 0 0.25em 0;
+    font-size: 1.05em;
+    font-weight: 600;
+}
+.bubble.assistant .text > ul,
+.bubble.assistant .text > ol {
+    margin: 0.25em 0 0.5em 0;
+    padding-left: 1.5em;
+}
+.bubble.assistant .text li {
+    margin: 0.1em 0;
+}
+.bubble.assistant .text code {
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 0.92em;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.bubble.assistant .text pre {
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
+    padding: 0.5em 0.75em;
+    margin: 0.4em 0;
+    overflow-x: auto;
+    font-size: 0.92em;
+}
+.bubble.assistant .text pre code {
+    background: transparent;
+    padding: 0;
+}
+.bubble.assistant .text a {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--muted);
+}
+.bubble.assistant .text a:hover {
+    text-decoration-color: var(--text);
+}
+
 .replay, .copy-btn {
     flex-shrink: 0;
     width: 1.625rem;
