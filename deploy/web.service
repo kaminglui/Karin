@@ -1,0 +1,39 @@
+# Karin web UI (FastAPI + Uvicorn).
+#
+# This is a TEMPLATE — @REPO_ROOT@ and @USER@ are substituted by deploy/setup.sh
+# before installing into /etc/systemd/system/. Don't symlink this file directly.
+#
+# The web UI is an INDEPENDENT frontend (browser-based push-to-talk /
+# text chat + panels). It runs in two configurations:
+#   • text-only — no sovits dependency, works on a fresh install without
+#     trained voice weights (features.yaml defaults TTS=off)
+#   • voice-enabled — sovits-server.service must be running; TTS turned on
+#     via KARIN_TTS_ENABLED=true (set in deploy/.env or the service env)
+# sovits is a Wants/After dep, not a Requires — web.service starts fine
+# without it and the runtime (web/server.py) skips TTS init when it's off.
+
+[Unit]
+Description=Karin web UI (FastAPI)
+Documentation=file://@REPO_ROOT@/README.md
+After=network-online.target ollama.service sovits-server.service
+Wants=network-online.target sovits-server.service
+Requires=ollama.service
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@REPO_ROOT@
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONUTF8=1"
+Environment="PATH=@REPO_ROOT@/.venv/bridge/bin:/usr/local/bin:/usr/bin:/bin"
+# Leading `-` = ignore exit code. Gives sovits a 10s grace window when it's
+# enabled + warming up, but doesn't block startup when it's absent (text-only
+# deploy) or down.
+ExecStartPre=-/bin/bash @REPO_ROOT@/deploy/wait-for-tts.sh http://127.0.0.1:9880 10
+ExecStart=@REPO_ROOT@/.venv/bridge/bin/python -m uvicorn web.server:app --host 0.0.0.0 --port 8001
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,111 @@
+# Continuous tuning knobs for the bridge subsystems. OPTIONAL —
+# rename to `tuning.yaml` to activate. Without this file every value
+# falls back to the code default below; behaviour is identical to
+# pre-tuning.
+#
+# Edits take effect after a process restart. Add a value here when
+# you want to swap an upstream API or chase a specific behaviour
+# without editing source. Add binary on/off subsystems to
+# config/features.yaml instead.
+#
+# Schema: dotted keys map to nested YAML — `tuning.get("news.cluster.title_jaccard")`
+# resolves to news → cluster → title_jaccard below.
+
+news:
+  cluster:
+    # Auto-merge clusters whose title-Jaccard >= this. Pre-merge.
+    # Lower → looser merging → fewer, broader clusters.
+    title_jaccard: 0.55
+    # Cluster-window in hours; articles farther apart never merge.
+    time_bucket_hours: 48
+    # Min unique informative tokens for a candidate to merge into
+    # an existing cluster (filters one-word headlines from over-merging).
+    min_informative_tokens: 3
+
+  cross_verify:
+    # Borderline band: pairs whose Jaccard falls in
+    # [low, high) get the LLM second-opinion. Outside the band,
+    # code wins (high → auto-merge already done above; low →
+    # never merge).
+    borderline_jaccard_low: 0.30
+    borderline_jaccard_high: 0.55
+    # How recent an article must be to be a cross-verify candidate.
+    fresh_window_hours: 24
+    # LLM call budget per ingest cycle. Hard cap — a noisy news
+    # day cannot run away with the LLM.
+    max_llm_calls_per_cycle: 5
+    # Min articles per cluster before it's eligible for cross-verify
+    # (1 = include singleton clusters).
+    min_cluster_articles: 1
+
+  fetch:
+    # Per-RSS-feed timeout (seconds). Total ingest time is bounded by
+    # parallelism × this. Bump if you add slow / large feeds.
+    per_feed_timeout_s: 5.0
+
+  service:
+    # Skip ingest_latest() if the last poll was within this window.
+    # The background poller (every 20 min) overlaps the TTL so a
+    # user request never triggers an extra fetch in normal usage.
+    fetch_ttl_minutes: 15
+    # Default max stories returned by get_news / /api/news/briefs
+    # when the caller doesn't pass max_results.
+    default_max_results: 3
+    # Retention cutoff for news clusters + articles. After each
+    # ingest, clusters whose latest_update_at is older than this are
+    # dropped from the ledger, and articles they exclusively owned
+    # are dropped too. Keeps the ledger size + graph-build latency
+    # bounded as news flow continues indefinitely. 0 disables
+    # pruning entirely.
+    retention_days: 30
+
+  graph:
+    # spaCy entity types to surface as graph nodes. Any OntoNotes NER
+    # label not in this list is silently dropped by noun_extract.
+    # Full label set for reference:
+    #   PERSON, ORG, GPE, LOC, FAC, EVENT, NORP, PRODUCT,
+    #   WORK_OF_ART, LAW, LANGUAGE, DATE, TIME, PERCENT, MONEY,
+    #   QUANTITY, ORDINAL, CARDINAL.
+    # NORP (nationalities / religious / political groups) is
+    # intentionally absent — it surfaces adjectival forms like
+    # "Chinese" that clutter the graph. Add it back if you want
+    # those.
+    keep_entity_types:
+      - PERSON
+      - ORG
+      - GPE
+      - LOC
+      - FAC
+      - EVENT
+    # Drop labels shorter than this (single-char tokens are usually
+    # spaCy noise like stray punctuation passed as ents).
+    min_label_length: 2
+    # Drop entities mentioned in fewer than this many cluster
+    # headlines. 2 filters one-off mentions.
+    min_occurrences: 2
+    # Cap on the entity list passed back to the graph — prevents an
+    # extremely verbose news cycle from spawning hundreds of nodes.
+    top_n: 40
+
+alerts:
+  service:
+    # Skip scan() if the last poll was within this window.
+    scan_ttl_minutes: 15
+  nws:
+    fetch_timeout_s: 15.0
+  advisory:
+    fetch_timeout_s: 10.0
+
+trackers:
+  fetch:
+    fetch_timeout_s: 10.0
+
+digest:
+  # Item caps per section in the daily digest. Beyond these, the
+  # remaining items are dropped (not summarized).
+  max_news_items: 5
+  max_alert_items: 5
+  max_tracker_items: 6
+  # Tracker only enters the digest if its 1d move >= this percent.
+  # Filters out flat-day noise. Tighten during volatile markets.
+  tracker_min_change_pct: 1.0

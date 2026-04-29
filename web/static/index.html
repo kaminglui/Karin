@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#C3A6D6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Karin</title>
+    <link rel="stylesheet" href="/static/style.css?v={{ASSET_VERSION}}">
+    <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+    <!-- KaTeX for rendering math in the math widget. CDN load; if
+         offline, the widget falls back to raw LaTeX text. -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+          crossorigin="anonymous">
+    <script defer
+            src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+            crossorigin="anonymous"></script>
+    <!-- Plotly for the grapher widget. Basic bundle (~280 KB). -->
+    <script defer
+            src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@2.35.2/plotly-basic.min.js"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+    <!-- Two-pane layout: left sidebar (conversations + memory) and
+         the main voice/chat surface on the right. The sidebar can
+         collapse on narrow viewports via the #sidebar-toggle button. -->
+    <div class="app-shell">
+
+        <aside class="sidebar" id="sidebar" aria-label="Conversations and memory">
+            <div class="sidebar-header">
+                <button id="new-chat-btn" class="new-chat-btn" type="button"
+                        aria-label="New chat" title="Start a new conversation">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14"></path><path d="M5 12h14"></path>
+                    </svg>
+                    <span>New chat</span>
+                </button>
+                <!-- TTS + STT indicators — two separate dots so the user
+                     knows at a glance which voice subsystem is on/off.
+                     State reflects features.yaml flags (resolved from
+                     /api/features at page load). The TTS dot also
+                     polls /api/voice/status for live sovits health
+                     when TTS is enabled. -->
+                <table class="voice-indicators-table"><tr>
+                    <td id="tts-status" class="voice-status off"
+                        role="status" aria-live="polite"
+                        title="Text-to-speech off">
+                        <span class="voice-dot" aria-hidden="true"></span>
+                        <span class="voice-label">TTS</span>
+                    </td>
+                    <td id="stt-status" class="voice-status off"
+                        role="status" aria-live="polite"
+                        title="Speech-to-text off">
+                        <span class="voice-dot" aria-hidden="true"></span>
+                        <span class="voice-label">STT</span>
+                    </td>
+                </tr></table>
+            </div>
+
+            <div class="sidebar-section" data-collapsible-key="conversations">
+                <h3 class="sidebar-heading">Conversations</h3>
+                <div id="conversation-list" class="conversation-list"
+                     role="list"></div>
+            </div>
+
+            <!-- Panels — clicking one opens a full-screen pop-up
+                 (.popup-overlay below). The pop-up has its own tab bar
+                 at the bottom for switching between digest/news/
+                 trackers/alerts without closing. The toggle button on
+                 the right edge of the viewport doubles as the close
+                 control when a pop-up is open. -->
+            <div class="sidebar-section" data-collapsible-key="panels">
+                <h3 class="sidebar-heading">Panels</h3>
+                <nav class="panel-nav" role="list">
+                    <label class="panel-nav-link voice-autoplay-row" id="voice-autoplay-row">
+                        <span class="panel-nav-emoji" aria-hidden="true">🔊</span>
+                        <span>Voice auto-play</span>
+                        <input type="checkbox" id="voice-autoplay-toggle" class="sidebar-toggle-input">
+                        <span class="sidebar-toggle-track" aria-hidden="true"></span>
+                    </label>
+                    <label class="panel-nav-link voice-autoplay-row" id="two-phase-row"
+                           title="Extra reply-rewriting pass for quality. Adds ~5-10s per turn.">
+                        <span class="panel-nav-emoji" aria-hidden="true">✨</span>
+                        <span>Quality replies (slower)</span>
+                        <input type="checkbox" id="two-phase-toggle" class="sidebar-toggle-input">
+                        <span class="sidebar-toggle-track" aria-hidden="true"></span>
+                    </label>
+                    <label class="panel-nav-link voice-autoplay-row sidebar-select-row" id="face-character-row"
+                           title="Which character's face to render on the top button. New options appear automatically when you add a folder under characters/. Changing reloads the page.">
+                        <span class="panel-nav-emoji" aria-hidden="true">🎭</span>
+                        <span>Character</span>
+                        <select id="face-character-select" class="sidebar-select" aria-label="Face character">
+                            <!-- Populated by app.js from
+                                 window.KARIN_AVAILABLE_FACES +
+                                 an "Auto (voice default)" option at top. -->
+                        </select>
+                    </label>
+                    <button class="panel-nav-link" role="listitem"
+                            type="button"
+                            data-panel-target="/ui/digest"
+                            data-panel-label="Daily digest">
+                        <span class="panel-nav-emoji" aria-hidden="true">🗞️</span>
+                        <span>Daily digest</span>
+                    </button>
+                    <button class="panel-nav-link" role="listitem"
+                            type="button"
+                            data-panel-target="/ui/news"
+                            data-panel-label="News">
+                        <span class="panel-nav-emoji" aria-hidden="true">📰</span>
+                        <span>News</span>
+                    </button>
+                    <button class="panel-nav-link" role="listitem"
+                            type="button"
+                            data-panel-target="/ui/trackers"
+                            data-panel-label="Trackers">
+                        <span class="panel-nav-emoji" aria-hidden="true">💹</span>
+                        <span>Trackers</span>
+                    </button>
+                    <button class="panel-nav-link" role="listitem"
+                            type="button"
+                            data-panel-target="/ui/alerts"
+                            data-panel-label="Alerts">
+                        <span class="panel-nav-emoji" aria-hidden="true">⚠️</span>
+                        <span>Alerts</span>
+                    </button>
+                    <button class="panel-nav-link" role="listitem"
+                            type="button"
+                            data-panel-target="/ui/facts"
+                            data-panel-label="Facts">
+                        <span class="panel-nav-emoji" aria-hidden="true">💡</span>
+                        <span>Facts</span>
+                    </button>
+                    <button class="panel-nav-link" role="listitem"
+                            type="button"
+                            data-panel-target="/ui/map"
+                            data-panel-label="Map">
+                        <span class="panel-nav-emoji" aria-hidden="true">🗺️</span>
+                        <span>Map</span>
+                    </button>
+                    <hr class="panel-nav-divider">
+                    <button class="panel-nav-link" role="listitem"
+                            type="button"
+                            data-panel-target="/ui/settings"
+                            data-panel-label="Settings">
+                        <span class="panel-nav-emoji" aria-hidden="true">⚙️</span>
+                        <span>Settings</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Memory moved to Settings page. The editor is kept here
+                 hidden so the JS that loads/saves memory still works
+                 without changes. The section is invisible in the sidebar. -->
+            <div class="sidebar-section memory-section" hidden>
+                <h3 class="sidebar-heading memory-section-heading"
+                    id="memory-heading" role="button" tabindex="0"
+                    aria-expanded="false" aria-controls="memory-editor">
+                    <span>Memory</span>
+                    <span class="sidebar-iconbtn" aria-hidden="true">
+                        <span class="chev">▸</span>
+                    </span>
+                </h3>
+                <div id="memory-editor" class="memory-editor" hidden>
+                    <label class="memory-field">
+                        <span class="memory-label">About you</span>
+                        <textarea id="memory-user" rows="4"
+                                  placeholder="I live in {city}. I work as a {occupation}. I prefer {style} answers."></textarea>
+                        <span class="memory-count" id="memory-user-count"></span>
+                    </label>
+                    <label class="memory-field">
+                        <span class="memory-label">Karin's instructions</span>
+                        <textarea id="memory-agent" rows="4"
+                                  placeholder="Keep replies {length}. Use a {tone} tone. Always {behavior}."></textarea>
+                        <span class="memory-count" id="memory-agent-count"></span>
+                    </label>
+                    <div class="memory-actions">
+                        <button id="memory-save" type="button">Save</button>
+                        <span id="memory-status" class="memory-status"></span>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Universal toggle button, always on the right edge of the
+             viewport, roughly halfway down, translucent. Its meaning
+             is tri-state:
+               idle        → open the left sidebar
+               sidebar     → close the left sidebar
+               popup       → close the panel pop-up
+             The icon + aria-label are swapped by app.js as state
+             changes. The button never moves. -->
+        <button id="sidebar-toggle" class="sidebar-toggle" type="button"
+                data-mode="idle"
+                aria-label="Open sidebar" aria-expanded="false">
+            <svg class="toggle-icon toggle-icon-menu" viewBox="0 0 24 24"
+                 width="20" height="20" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <line x1="4" y1="7"  x2="20" y2="7"/>
+                <line x1="4" y1="12" x2="20" y2="12"/>
+                <line x1="4" y1="17" x2="20" y2="17"/>
+            </svg>
+            <svg class="toggle-icon toggle-icon-back" viewBox="0 0 24 24"
+                 width="20" height="20" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true" hidden>
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            <svg class="toggle-icon toggle-icon-close" viewBox="0 0 24 24"
+                 width="20" height="20" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true" hidden>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+                <line x1="18" y1="6" x2="6" y2="18"/>
+            </svg>
+        </button>
+
+        <main class="main">
+            <!-- Circle button with wave ring + thinking aura.
+                 The button doubles as the character's face.
+                 Two face renderers are present; an inline script
+                 near the bottom of <body> hides one based on the
+                 server-injected {{ACTIVE_CHARACTER}} and assigns
+                 id="face-img" to the survivor.
+                   - #face-bitmap: legacy PNG-per-vowel swap (karin
+                                    and any other character with
+                                    expression art under
+                                    /api/characters/<name>/expressions/).
+                   - #face-sun:    procedural SVG sun with a mouth
+                                    ellipse that morphs per vowel.
+                                    Used when ACTIVE_CHARACTER is
+                                    "general" (no expression art
+                                    — face.js generates the mouth
+                                    shape from code).
+                 Aura + wave divs sit INSIDE the button so they
+                 always center on the face regardless of wrap
+                 padding. -->
+            <div class="ptt-wrap" id="ptt-wrap">
+                <button id="ptt" class="ptt" type="button" disabled>
+                    <div class="aura aura-1"></div>
+                    <div class="aura aura-2"></div>
+                    <div class="wave" id="wave-ring"></div>
+                    <img id="face-bitmap" class="face-img"
+                         src="/static/faces/default.png"
+                         alt="" draggable="false" style="display:none">
+                    <svg id="face-sun" class="face-sun"
+                         viewBox="0 0 100 100"
+                         xmlns="http://www.w3.org/2000/svg"
+                         aria-hidden="true" focusable="false"
+                         style="display:none">
+                        <circle class="sun-body" cx="50" cy="50" r="47"/>
+                        <circle class="eye eye-l" cx="35" cy="40" r="4"/>
+                        <circle class="eye eye-r" cx="65" cy="40" r="4"/>
+                        <ellipse id="face-mouth" cx="50" cy="64"
+                                 rx="12" ry="1.5"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Status -->
+            <div id="status" class="status" role="status" aria-live="polite"></div>
+
+            <!-- Holiday banner: hidden by default. holidays.js flips it
+                 visible + fills in content if today matches a US/CN
+                 holiday (or ?testHoliday=YYYY-MM-DD is passed). -->
+            <div id="holiday-banner" class="holiday-banner" role="status" hidden>
+                <span class="holiday-emoji" aria-hidden="true"></span>
+                <span class="holiday-text"></span>
+                <button class="holiday-play" type="button"
+                        aria-label="Play Karin's holiday greeting"
+                        title="Hear Karin's greeting (needs Voice on)">🔊</button>
+                <button class="holiday-close" type="button"
+                        aria-label="Dismiss holiday banner">×</button>
+            </div>
+
+            <!-- Chat history — scrollable, fades at top near the circle -->
+            <div class="chat-area" id="chat-area">
+                <div id="transcript" class="transcript" aria-live="polite"></div>
+            </div>
+
+            <!-- Text prompt input pinned to bottom -->
+            <div class="input-area">
+                <input type="text" id="text-input" placeholder="Type a message..."
+                       autocomplete="off" enterkeyhint="send" />
+                <button id="send-btn" class="send-btn" type="button" aria-label="Send">
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                </button>
+            </div>
+        </main>
+
+        <!-- Full-screen pop-up overlay for the /ui/* panels. Hidden
+             by default; opened by any .panel-nav-link or any element
+             carrying data-panel-target. Bottom tab bar switches
+             between panels without closing. The universal
+             #sidebar-toggle on the right edge doubles as the close
+             control when this is open. -->
+        <div class="popup-overlay" id="popup-overlay" hidden
+             role="dialog" aria-modal="true"
+             aria-label="Dashboard panels">
+            <iframe class="popup-overlay-frame"
+                    id="popup-overlay-frame"
+                    title="Panel content" loading="lazy"></iframe>
+            <nav class="popup-overlay-tabs" role="tablist"
+                 aria-label="Switch panel">
+                <button type="button" class="popup-overlay-tab"
+                        role="tab" aria-selected="true"
+                        data-panel-target="/ui/digest"
+                        data-panel-label="Daily digest">
+                    <span class="popup-overlay-tab-emoji" aria-hidden="true">🗞️</span>
+                    <span class="popup-overlay-tab-label">Digest</span>
+                </button>
+                <button type="button" class="popup-overlay-tab"
+                        role="tab" aria-selected="false"
+                        data-panel-target="/ui/news"
+                        data-panel-label="News">
+                    <span class="popup-overlay-tab-emoji" aria-hidden="true">📰</span>
+                    <span class="popup-overlay-tab-label">News</span>
+                </button>
+                <button type="button" class="popup-overlay-tab"
+                        role="tab" aria-selected="false"
+                        data-panel-target="/ui/trackers"
+                        data-panel-label="Trackers">
+                    <span class="popup-overlay-tab-emoji" aria-hidden="true">💹</span>
+                    <span class="popup-overlay-tab-label">Trackers</span>
+                </button>
+                <button type="button" class="popup-overlay-tab"
+                        role="tab" aria-selected="false"
+                        data-panel-target="/ui/alerts"
+                        data-panel-label="Alerts">
+                    <span class="popup-overlay-tab-emoji" aria-hidden="true">⚠️</span>
+                    <span class="popup-overlay-tab-label">Alerts</span>
+                </button>
+                <button type="button" class="popup-overlay-tab"
+                        role="tab" aria-selected="false"
+                        data-panel-target="/ui/facts"
+                        data-panel-label="Facts">
+                    <span class="popup-overlay-tab-emoji" aria-hidden="true">💡</span>
+                    <span class="popup-overlay-tab-label">Facts</span>
+                </button>
+                <button type="button" class="popup-overlay-tab"
+                        role="tab" aria-selected="false"
+                        data-panel-target="/ui/map"
+                        data-panel-label="Map">
+                    <span class="popup-overlay-tab-emoji" aria-hidden="true">🗺️</span>
+                    <span class="popup-overlay-tab-label">Map</span>
+                </button>
+                <button type="button" class="popup-overlay-tab"
+                        role="tab" aria-selected="false"
+                        data-panel-target="/ui/settings"
+                        data-panel-label="Settings">
+                    <span class="popup-overlay-tab-emoji" aria-hidden="true">⚙️</span>
+                    <span class="popup-overlay-tab-label">Settings</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Panel scripts load BEFORE app.js so app.js can call
+         Chat.mountPanelForTool() from the tool_call event handler. -->
+    <script src="/static/panels/panels.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/alerts.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/news.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/trackers.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/weather.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/wiki.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/history.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/websearch.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/places.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/math.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/graph.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/circuit.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/inflation.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/population.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/facts.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/alice.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/time.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/convert.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/panels/chat.js?v={{ASSET_VERSION}}"></script>
+    <script>
+    // Face picker — MUST run before face.js + app.js so their
+    // getElementById("face-img") resolves to the right element.
+    // Character + voice + available-face list are injected
+    // server-side at serve time (see web/server.py::index) so
+    // this is synchronous; no fetch race against app.js's
+    // module-load captures.
+    //
+    // Selection order:
+    //   1. localStorage `karin.faceCharacter` — a character name
+    //      chosen via the sidebar dropdown (e.g. "general").
+    //      "auto" (or unset) falls through to step 2.
+    //   2. Active voice (config.tts.voice) — default face owner.
+    //   3. Fall back to the first character in the available list
+    //      if the requested one isn't present (e.g. folder renamed).
+    //
+    // A character's renderer comes from its face.json (procedural)
+    // or expressions/*.png (bitmap). Selection is one dropdown
+    // row in the sidebar; no separate sun/bitmap toggle.
+    (function () {
+      var character = "{{ACTIVE_CHARACTER}}";
+      var voice     = "{{ACTIVE_VOICE}}";
+      if (!character || character.indexOf("{{") === 0) character = "karin";
+      if (!voice     || voice.indexOf("{{") === 0)     voice = character;
+      window.KARIN_ACTIVE_CHARACTER = character;
+      window.KARIN_ACTIVE_VOICE     = voice;
+
+      var available = {{AVAILABLE_FACES_JSON}};
+      if (!Array.isArray(available)) available = [];
+      window.KARIN_AVAILABLE_FACES = available;
+
+      function findFace(name) {
+        for (var i = 0; i < available.length; i++) {
+          if (available[i].name === name) return available[i];
+        }
+        return null;
+      }
+
+      var override = null;
+      try { override = window.localStorage.getItem("karin.faceCharacter"); }
+      catch (e) { /* localStorage unavailable in some privacy modes */ }
+      var pickedName = (override && override !== "auto") ? override : voice;
+      var face = findFace(pickedName)
+              || findFace(voice)
+              || findFace(character)
+              || (available.length ? available[0] : null);
+      window.KARIN_FACE_CHOICE = face ? face.name : null;
+
+      var bitmap = document.getElementById("face-bitmap");
+      var sun    = document.getElementById("face-sun");
+
+      var useSun = !!(face && face.face_config &&
+                      face.face_config.type === "procedural-sun");
+
+      if (useSun) {
+        if (bitmap && bitmap.parentNode) bitmap.parentNode.removeChild(bitmap);
+        if (sun) {
+          sun.id = "face-img";       // app.js looks up face-img
+          sun.style.display = "block";
+          var fc    = face.face_config;
+          window.KARIN_FACE_CONFIG = fc;
+          var body  = fc.body  || {};
+          var eyes  = fc.eyes  || {};
+          var mouth = fc.mouth || {};
+          var sunBody = sun.querySelector(".sun-body");
+          if (sunBody) {
+            if (body.fill)         sunBody.setAttribute("fill",   body.fill);
+            if (body.stroke)       sunBody.setAttribute("stroke", body.stroke);
+            if (body.stroke_width) sunBody.setAttribute("stroke-width", body.stroke_width);
+          }
+          sun.querySelectorAll(".eye").forEach(function (e) {
+            if (eyes.fill) e.setAttribute("fill", eyes.fill);
+          });
+          var mouthEl = sun.querySelector("#face-mouth");
+          if (mouthEl && mouth.fill) mouthEl.setAttribute("fill", mouth.fill);
+          var theme = fc.theme || {};
+          var rootStyle = document.documentElement.style;
+          if (theme.accent)          rootStyle.setProperty("--sun-accent",          theme.accent);
+          if (theme.accent_glow)     rootStyle.setProperty("--sun-accent-glow",     theme.accent_glow);
+          if (theme.gradient_from)   rootStyle.setProperty("--sun-gradient-from",   theme.gradient_from);
+          if (theme.gradient_to)     rootStyle.setProperty("--sun-gradient-to",     theme.gradient_to);
+          var aura = fc.aura || {};
+          if (aura.color)             rootStyle.setProperty("--sun-aura-color",       aura.color);
+          if (aura.ring_border_px)    rootStyle.setProperty("--sun-aura-border",      aura.ring_border_px + "px");
+          if (aura.pulse_scale_from)  rootStyle.setProperty("--sun-aura-scale-from",  aura.pulse_scale_from);
+          if (aura.pulse_scale_to)    rootStyle.setProperty("--sun-aura-scale-to",    aura.pulse_scale_to);
+          if (aura.pulse_ms)          rootStyle.setProperty("--sun-aura-pulse-ms",    aura.pulse_ms + "ms");
+        }
+        // Also mark <html> so theme vars propagate to root-level
+        // chrome (scrollbars on html, selection highlight etc.).
+        document.documentElement.classList.add("sun-mode");
+        document.body.classList.add("sun-mode");
+      } else {
+        if (sun && sun.parentNode) sun.parentNode.removeChild(sun);
+        if (bitmap) {
+          bitmap.id = "face-img";
+          bitmap.style.display = "block";
+          var folder = face ? face.name : voice;
+          window.KARIN_FACE_BASE = "/api/characters/" + folder + "/expressions/";
+          bitmap.src = window.KARIN_FACE_BASE + "default.png";
+        }
+      }
+    })();
+    </script>
+    <script src="/static/face.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/holidays.js?v={{ASSET_VERSION}}"></script>
+    <script src="/static/stt_web.js"></script>
+    <script src="/static/app.js?v={{ASSET_VERSION}}"></script>
+</body>
+</html>

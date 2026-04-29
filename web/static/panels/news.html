@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>News · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>News</h1>
+      <span id="subtitle" class="subtitle"></span>
+      <div class="panel-actions">
+        <a class="panel-link" href="/ui/graph" title="Open relation graph">Graph</a>
+        <button id="refresh-btn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <div id="news-panel-root"></div>
+  </div>
+
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/panels.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/news.js?v={{ASSET_VERSION}}"></script>
+  <script>
+    // Standalone-page bootstrap. UI-5 will reuse mountNewsPanel against
+    // a different container inside Karin's chat without touching this page.
+    document.addEventListener("DOMContentLoaded", () => {
+      const root = document.getElementById("news-panel-root");
+      const subtitle = document.getElementById("subtitle");
+      const refreshBtn = document.getElementById("refresh-btn");
+
+      // Optional topic via ?topic=... query param — lets the user deep-link
+      // to "show me tokyo news" without going through Karin first.
+      const params = new URLSearchParams(location.search);
+      const topic = params.get("topic") || null;
+
+      const controller = News.mountNewsPanel(root, {
+        topic,
+        onSubtitle: (text) => { subtitle.textContent = text; },
+      });
+
+      refreshBtn.addEventListener("click", () => controller.refresh());
+    });
+  </script>
+</body>
+</html>

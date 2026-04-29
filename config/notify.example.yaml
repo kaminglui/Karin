@@ -1,0 +1,86 @@
+# Outbound notifications — copy to `notify.yaml` to activate.
+#
+# Without this file, the dispatcher uses built-in defaults (alerts at
+# WARNING+ go to every enabled channel; tracker shocks at any severity
+# go to every enabled channel). Override here when you want to mute a
+# kind, change cooldowns, or split kinds across channels.
+#
+# Channels listed here are tried in order. A channel is "enabled" only
+# when its env var is set (see below) AND it appears in `channels:`.
+# Missing env → channel is silently skipped on the next dispatcher build.
+#
+# The `notifications` feature flag in config/features.yaml gates the
+# whole subsystem — when off, every send is a no-op regardless of this
+# file's contents.
+
+# Channels in the order they're attempted on each event. Names must
+# match factories in bridge/notify/channels.py (currently `discord`,
+# plus `ntfy` as a legacy option — add it here to re-enable).
+channels:
+  - discord
+
+# Routing rules — first matching rule's channels are unioned with any
+# subsequent matches. Drop a rule by deleting its block; mute a kind by
+# setting min_severity above what your subsystems emit.
+rules:
+  # Active-alert pushes. The alert service emits this for any alert
+  # at ADVISORY (severity=warning) or CRITICAL (severity=critical).
+  # 30-min cooldown per alert_id keeps the bell from ringing on every
+  # poll (alert is "active" the entire time its cooldown_until is in
+  # the future).
+  - kinds: ["alerts.fired"]
+    min_severity: warning
+    channels: ["discord"]
+    cooldown_s: 1800
+
+  # Tracker shock notifications. Trackers emit this when shock_label
+  # is "surging" or "plunging" (a >3-sigma 1d move on daily series).
+  # Hourly cooldown per tracker_id; rare event so default channels.
+  - kinds: ["trackers.shock"]
+    min_severity: info
+    channels: ["discord"]
+    cooldown_s: 3600
+
+  # News transitions to CONFIRMED — high-noise, off by default
+  # (min_severity: critical means nothing fires it). Flip to "info"
+  # if you want every newly-confirmed cluster to ping.
+  - kinds: ["news.confirmed"]
+    min_severity: critical
+    channels: ["discord"]
+    cooldown_s: 600
+
+  # User reminders. The reminder scheduler emits this when a stored
+  # reminder's trigger_at passes. Severity is WARNING so it lands
+  # visibly without bypassing Do Not Disturb. dedupe_key=reminder_id
+  # in the payload prevents the same reminder firing twice if the
+  # scheduler somehow ticks twice with the row still flagged due
+  # (the store's atomic mark_delivered already guards this — the
+  # cooldown is belt-and-braces).
+  - kinds: ["reminders.fired"]
+    min_severity: info
+    channels: ["discord"]
+    cooldown_s: 60
+
+  # Calendar "meeting in N min" pings. The calendar poller reads
+  # your configured .ics URLs every 10 min and emits one of these
+  # per event crossing its lead-time window. Dedup key is
+  # (uid|start_iso) so a rescheduled meeting re-fires; same
+  # meeting at the same time never fires twice.
+  - kinds: ["calendar.upcoming"]
+    min_severity: info
+    channels: ["discord"]
+    cooldown_s: 60
+
+# ---- environment variables (NOT in YAML — keep secrets out) -----------
+#
+# KARIN_NOTIFY_DISCORD_WEBHOOK
+#     Full Discord webhook URL. Generate at:
+#     Server Settings → Integrations → Webhooks → New Webhook → Copy URL.
+#     Leave unset to disable the discord channel without removing it
+#     from the channels: list above.
+#
+# KARIN_NOTIFY_NTFY_TOPIC  (legacy — ntfy support still works)
+#     Full ntfy topic URL. To re-enable: set this env var AND add
+#     "ntfy" to the channels: list above AND each rule's channels:
+#     entry that should fan out to it. Public ntfy.sh topics are
+#     unauthenticated — use a long random suffix.

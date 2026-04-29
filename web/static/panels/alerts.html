@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Alerts · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>Alerts</h1>
+      <span id="subtitle" class="subtitle"></span>
+      <div class="panel-actions">
+        <button id="refresh-btn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <!-- Panel content renders here. mountAlertsPanel() manages this node
+         and nothing else, so the same JS can be called from a chat page
+         later by passing a different container element. -->
+    <div id="alerts-panel-root"></div>
+  </div>
+
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/panels.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/alerts.js?v={{ASSET_VERSION}}"></script>
+  <script>
+    // Standalone-page bootstrap. When this panel is embedded inside
+    // Karin's chat later (UI-5), that page will call mountAlertsPanel()
+    // itself against its own container and skip this auto-boot.
+    document.addEventListener("DOMContentLoaded", () => {
+      const root = document.getElementById("alerts-panel-root");
+      const subtitle = document.getElementById("subtitle");
+      const refreshBtn = document.getElementById("refresh-btn");
+
+      const controller = Alerts.mountAlertsPanel(root, {
+        onSubtitle: (text) => { subtitle.textContent = text; },
+      });
+
+      refreshBtn.addEventListener("click", () => controller.refresh());
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+[
+  {
+    "id": "associated-press",
+    "name": "Associated Press",
+    "domain": "apnews.com",
+    "tier": "wire",
+    "ownership_group": "ap",
+    "is_wire_service": true,
+    "notes": "Global wire service. Fed via NewsAPI (needs KARIN_NEWSAPI_KEY)."
+  },
+  {
+    "id": "bloomberg",
+    "name": "Bloomberg",
+    "domain": "bloomberg.com",
+    "tier": "wire",
+    "ownership_group": "bloomberg",
+    "is_wire_service": true,
+    "notes": "Financial wire. Fed via NewsAPI (needs KARIN_NEWSAPI_KEY)."
+  },
+  {
+    "id": "bbc",
+    "name": "BBC",
+    "domain": "bbc.com",
+    "tier": "reputable",
+    "ownership_group": "bbc",
+    "is_wire_service": false,
+    "notes": "UK public broadcaster (world feed)"
+  },
+  {
+    "id": "bbc_us",
+    "name": "BBC US",
+    "domain": "bbc.com",
+    "tier": "reputable",
+    "ownership_group": "bbc",
+    "is_wire_service": false,
+    "notes": "BBC US & Canada feed"
+  },
+  {
+    "id": "bbc_asia",
+    "name": "BBC Asia",
+    "domain": "bbc.com",
+    "tier": "reputable",
+    "ownership_group": "bbc",
+    "is_wire_service": false,
+    "notes": "BBC Asia-Pacific feed"
+  },
+  {
+    "id": "npr",
+    "name": "NPR",
+    "domain": "npr.org",
+    "tier": "reputable",
+    "ownership_group": "npr",
+    "is_wire_service": false,
+    "notes": "US public radio"
+  },
+  {
+    "id": "guardian",
+    "name": "Guardian",
+    "domain": "theguardian.com",
+    "tier": "reputable",
+    "ownership_group": "guardian_media_group",
+    "is_wire_service": false,
+    "notes": ""
+  },
+  {
+    "id": "nyt",
+    "name": "New York Times",
+    "domain": "nytimes.com",
+    "tier": "reputable",
+    "ownership_group": "nyt",
+    "is_wire_service": false,
+    "notes": "World feed"
+  },
+  {
+    "id": "nyt_us",
+    "name": "New York Times US",
+    "domain": "nytimes.com",
+    "tier": "reputable",
+    "ownership_group": "nyt",
+    "is_wire_service": false,
+    "notes": "US domestic feed"
+  },
+  {
+    "id": "aljazeera",
+    "name": "Al Jazeera",
+    "domain": "aljazeera.com",
+    "tier": "reputable",
+    "ownership_group": "al_jazeera",
+    "is_wire_service": false,
+    "notes": "Qatari international broadcaster (English)"
+  },
+  {
+    "id": "dw",
+    "name": "Deutsche Welle",
+    "domain": "dw.com",
+    "tier": "reputable",
+    "ownership_group": "deutsche_welle",
+    "is_wire_service": false,
+    "notes": "German public broadcaster (English)"
+  },
+  {
+    "id": "nhk",
+    "name": "NHK World-Japan",
+    "domain": "nhk.or.jp",
+    "tier": "reputable",
+    "ownership_group": "nhk",
+    "is_wire_service": false,
+    "notes": "Japan public broadcaster (English). Strong on JP domestic + East Asia."
+  },
+  {
+    "id": "japantimes",
+    "name": "Japan Times",
+    "domain": "japantimes.co.jp",
+    "tier": "reputable",
+    "ownership_group": "japan_times",
+    "is_wire_service": false,
+    "notes": "Japan's oldest English-language newspaper. Japan domestic + regional."
+  },
+  {
+    "id": "scmp",
+    "name": "South China Morning Post",
+    "domain": "scmp.com",
+    "tier": "reputable",
+    "ownership_group": "alibaba",
+    "is_wire_service": false,
+    "notes": "Hong Kong English-language daily. Strong on China, HK, regional business."
+  },
+  {
+    "id": "cna",
+    "name": "Channel News Asia",
+    "domain": "channelnewsasia.com",
+    "tier": "reputable",
+    "ownership_group": "mediacorp",
+    "is_wire_service": false,
+    "notes": "Singapore broadcaster. Covers all of East/Southeast Asia in English."
+  },
+  {
+    "id": "yonhap",
+    "name": "Yonhap News",
+    "domain": "yna.co.kr",
+    "tier": "reputable",
+    "ownership_group": "yonhap",
+    "is_wire_service": true,
+    "notes": "South Korea's official news agency (English). Wire-tier for Korean stories."
+  },
+  {
+    "id": "taipeitimes",
+    "name": "Taipei Times",
+    "domain": "taipeitimes.com",
+    "tier": "reputable",
+    "ownership_group": "liberty_times",
+    "is_wire_service": false,
+    "notes": "Taiwan English-language daily. Taiwan domestic + cross-strait."
+  },
+  {
+    "id": "scmp_hk",
+    "name": "SCMP Hong Kong",
+    "domain": "scmp.com",
+    "tier": "reputable",
+    "ownership_group": "alibaba",
+    "is_wire_service": false,
+    "notes": "SCMP Hong Kong-specific feed."
+  },
+  {
+    "id": "scmp_china",
+    "name": "SCMP China",
+    "domain": "scmp.com",
+    "tier": "reputable",
+    "ownership_group": "alibaba",
+    "is_wire_service": false,
+    "notes": "SCMP mainland China feed."
+  },
+  {
+    "id": "globaltimes",
+    "name": "Global Times",
+    "domain": "globaltimes.cn",
+    "tier": "reputable",
+    "ownership_group": "peoples_daily",
+    "is_wire_service": false,
+    "notes": "Chinese state media (English). Useful for reading Beijing's messaging; treat editorial stance accordingly."
+  },
+  {
+    "id": "caixin",
+    "name": "Caixin Global",
+    "domain": "caixinglobal.com",
+    "tier": "reputable",
+    "ownership_group": "caixin",
+    "is_wire_service": false,
+    "notes": "Chinese independent financial journalism (English). Strong on economy, policy, business."
+  },
+  {
+    "id": "hkfp",
+    "name": "Hong Kong Free Press",
+    "domain": "hongkongfp.com",
+    "tier": "reputable",
+    "ownership_group": "hkfp",
+    "is_wire_service": false,
+    "notes": "Independent, non-profit HK English-language outlet."
+  }
+]

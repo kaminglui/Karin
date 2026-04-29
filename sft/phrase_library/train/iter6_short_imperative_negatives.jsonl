@@ -1,0 +1,8 @@
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Drop that request."}, {"role": "assistant", "content": "Okay, dropped."}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Never mind."}, {"role": "assistant", "content": "No worries."}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Scratch that."}, {"role": "assistant", "content": "Gotcha — scratched."}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Forget it."}, {"role": "assistant", "content": "Alright, forgotten."}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Hold on a sec."}, {"role": "assistant", "content": "Take your time."}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Wait a moment."}, {"role": "assistant", "content": "Sure, ready when you are."}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Back up a bit."}, {"role": "assistant", "content": "Sure — what part?"}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Stop right there."}, {"role": "assistant", "content": "Stopped."}]}

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Digest · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+  <style>
+    /* digest-specific layout — uses the shared panels.css for the
+     * container chrome and layers section styling on top. */
+    .digest-headline {
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      background: rgba(var(--tint-rgb), 0.08);
+      border: 1px solid rgba(var(--tint-rgb), 0.2);
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .digest-section { margin-bottom: 1.25rem; }
+    .digest-section h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--muted, #6e5585);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .digest-item {
+      padding: 0.5rem 0.75rem;
+      border-left: 3px solid rgba(var(--tint-rgb), 0.25);
+      margin-bottom: 0.5rem;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 0 0.35rem 0.35rem 0;
+      /* A default arrow cursor on the row signals "this is UI", not
+       * "this is a text field". The title text itself stays
+       * selectable (user-select: text on the inner span), but no
+       * blinking insert caret appears on hover. */
+      cursor: default;
+    }
+    /* Collapsible variant (news items use <details>) — drop outer
+     * padding so the clickable <summary> row fills the full width. */
+    details.digest-item { padding: 0; }
+    /* <details>/<summary> give us expand/collapse for free. Strip the
+     * native disclosure triangle; we draw our own chevron on the
+     * right so the row stays visually aligned with tracker cards. */
+    details.digest-item > summary {
+      list-style: none;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      user-select: none;
+      outline: none;
+    }
+    details.digest-item > summary::-webkit-details-marker { display: none; }
+    details.digest-item > summary::before {
+      content: "▸";
+      flex: 0 0 0.9rem;
+      margin-top: 0.05rem;
+      font-size: 0.7rem;
+      color: var(--muted, #6e5585);
+      transition: transform 120ms ease;
+    }
+    details.digest-item[open] > summary::before { transform: rotate(90deg); }
+    details.digest-item > summary:focus-visible {
+      background: rgba(var(--tint-rgb), 0.08);
+    }
+    .digest-item .title {
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+      /* Selection follows the panel-wide non-editable rule in
+       * panels.css (body → user-select: none; inputs opt back in).
+       * The override that used to re-enable selection here was
+       * inconsistent with the rest of the UI — if copy-a-headline
+       * comes back as a need later, add a per-row "copy" button. */
+      cursor: default;
+    }
+    .digest-item .meta {
+      font-size: 0.8rem;
+      color: var(--muted, #6e5585);
+    }
+    /* Indent the meta line past the chevron on collapsible items so
+     * it doesn't read as a separate unanchored row when expanded. */
+    details.digest-item .meta {
+      padding: 0 0.75rem 0.55rem 1.65rem;
+    }
+    .digest-item.level-critical { border-left-color: #c0392b; }
+    .digest-item.level-advisory { border-left-color: #d97706; }
+    .digest-item.level-watch    { border-left-color: #059669; }
+    .digest-item.state-confirmed .state-pill {
+      background: #059669; color: white;
+    }
+    .digest-item.state-provisionally_confirmed .state-pill {
+      background: #d97706; color: white;
+    }
+    .state-pill {
+      display: inline-block;
+      padding: 0.08rem 0.4rem;
+      border-radius: 0.4rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      margin-right: 0.4rem;
+      background: #6e7781; color: white;
+    }
+    .digest-empty {
+      color: var(--muted, #6e5585);
+      font-style: italic;
+      padding: 0.4rem 0;
+    }
+    .digest-error {
+      color: #c0392b;
+      padding: 0.5rem;
+      border: 1px solid rgba(192, 57, 43, 0.3);
+      border-radius: 0.4rem;
+    }
+    .tracker-row {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .tracker-change.up   { color: #059669; font-variant-numeric: tabular-nums; }
+    .tracker-change.down { color: #c0392b; font-variant-numeric: tabular-nums; }
+    .tracker-change.flat { color: var(--muted, #6e5585); font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>Digest</h1>
+      <span id="subtitle" class="subtitle"></span>
+      <div class="panel-actions">
+        <button id="refresh-btn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <div id="digest-root"><div class="digest-empty">Loading...</div></div>
+  </div>
+
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script>
+    // This page is read-only — no shared panel mounter lib needed.
+    // It fetches /api/digest/today, renders the three sections
+    // (news, alerts, trackers), and re-renders on Refresh.
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+      );
+    }
+
+    function fmtLocal(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString();
+      } catch (_) { return iso; }
+    }
+
+    function renderNews(items) {
+      if (!items || !items.length) {
+        return '<div class="digest-empty">No confirmed stories today.</div>';
+      }
+      return items.map((n) => {
+        const sources = (n.sources || []).join(" · ");
+        // Fall back to voice_line if the backend didn't fill title —
+        // rescues older digests that were built before the title fix.
+        const headline = n.title || n.voice_line || "(no headline)";
+        const indep = n.independent_confirmations || 0;
+        const indepLabel = `${indep} independent source${indep === 1 ? "" : "s"}`;
+        const metaParts = [];
+        if (sources) metaParts.push(esc(sources));
+        metaParts.push(indepLabel);
+        const meta = metaParts.join(" — ");
+        // <details> gives us collapse/expand for free. No `open`
+        // attribute = default collapsed; users click the summary row
+        // to reveal the meta line.
+        return `
+          <details class="digest-item state-${esc(n.state)}">
+            <summary>
+              <span class="state-pill">${esc(n.state.replace(/_/g, " "))}</span>
+              <span class="title">${esc(headline)}</span>
+            </summary>
+            <div class="meta">${meta}</div>
+          </details>`;
+      }).join("");
+    }
+
+    function renderAlerts(items) {
+      if (!items || !items.length) {
+        return '<div class="digest-empty">No active alerts.</div>';
+      }
+      return items.map((a) => {
+        const bullets = (a.reasoning_bullets || []).map(esc).join(" · ");
+        return `
+          <div class="digest-item level-${esc(a.level.toLowerCase())}">
+            <div class="title">
+              <span class="state-pill">${esc(a.level)}</span>
+              ${esc(a.title)}
+            </div>
+            <div class="meta">${bullets}</div>
+          </div>`;
+      }).join("");
+    }
+
+    function renderTrackers(items) {
+      if (!items || !items.length) {
+        return '<div class="digest-empty">Nothing moved more than 1% today.</div>';
+      }
+      return items.map((t) => {
+        const pct = t.change_1d_pct;
+        const dir = pct == null ? "flat" : pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+        const pctStr = pct == null ? "—" : (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%";
+        const arrow = dir === "up" ? "▲" : dir === "down" ? "▼" : "•";
+        return `
+          <div class="digest-item">
+            <div class="tracker-row">
+              <div>
+                <div class="title">${esc(t.label)}</div>
+                <div class="meta">
+                  latest: ${t.latest_value != null ? t.latest_value.toFixed(4) : "—"}
+                  ${t.shock_label ? `· shock: ${esc(t.shock_label)}` : ""}
+                </div>
+              </div>
+              <div class="tracker-change ${dir}">${arrow} ${pctStr}</div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    async function loadDigest() {
+      const root = document.getElementById("digest-root");
+      const subtitle = document.getElementById("subtitle");
+      root.innerHTML = '<div class="digest-empty">Loading...</div>';
+      try {
+        const resp = await fetch("/api/digest/today", { cache: "no-store" });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        subtitle.textContent = `generated ${fmtLocal(data.generated_at)}`;
+        root.innerHTML = `
+          <div class="digest-headline">${esc(data.headline)}</div>
+
+          <section class="digest-section">
+            <h2>News</h2>
+            ${renderNews(data.news)}
+          </section>
+
+          <section class="digest-section">
+            <h2>Active Alerts</h2>
+            ${renderAlerts(data.alerts)}
+          </section>
+
+          <section class="digest-section">
+            <h2>Tracker Moves</h2>
+            ${renderTrackers(data.trackers)}
+          </section>`;
+      } catch (e) {
+        root.innerHTML = `<div class="digest-error">Failed to load digest: ${esc(e.message || e)}</div>`;
+        subtitle.textContent = "error";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("refresh-btn").addEventListener("click", loadDigest);
+      loadDigest();
+    });
+  </script>
+</body>
+</html>

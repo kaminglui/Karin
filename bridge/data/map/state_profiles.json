@@ -1,0 +1,320 @@
+{
+  "_metadata": {
+    "version": 1,
+    "data_as_of": "2026-04-27",
+    "notes": "Curated per-state economic profiles. Top industries are paraphrased BLS QCEW high-employment sectors as of ~2024; resources combine USGS extractive industry, USDA agricultural specialties, and major-port/military infrastructure. Narratives are editorial — they explain WHY rent is what it is, integrating the region memberships from regions.json. Replace with fetched BLS QCEW employment-share data when the per-state fetcher lands.",
+    "source_hints": {
+      "industries": "BLS QCEW state employment by NAICS sector",
+      "resources": "USGS Mineral Commodity Summaries + USDA NASS state agricultural rankings",
+      "narrative": "Editorial synthesis"
+    }
+  },
+  "by_state": {
+    "AL": {
+      "name": "Alabama",
+      "top_industries": ["Auto manufacturing (Mercedes, Honda, Hyundai)", "Aerospace + defense (Huntsville)", "Agriculture (poultry, cotton, peanuts)"],
+      "resources": ["Coal (Birmingham legacy)", "Timber + paper", "Tennessee River + Gulf ports"],
+      "narrative": "Manufacturing transplants from the auto industry plus the Huntsville aerospace cluster keep the state employed, but rents stay near the bottom — abundant land, no major coastal city pressure."
+    },
+    "AK": {
+      "name": "Alaska",
+      "top_industries": ["Oil + gas (North Slope)", "Commercial fishing (salmon, pollock, crab)", "Federal/military + tourism"],
+      "resources": ["Crude oil (Prudhoe Bay)", "Natural gas", "Salmon + groundfish", "Rare earths (potential)"],
+      "narrative": "Resource extraction + federal payroll dominate. Rents are mid-range despite tiny population because everything must be shipped or flown in — logistics premium, not demand premium."
+    },
+    "AZ": {
+      "name": "Arizona",
+      "top_industries": ["Tech (Phoenix metro: chip fab, data centers)", "Tourism + retiree services", "Aerospace + defense", "Mining (copper)"],
+      "resources": ["Copper (#1 US producer)", "Solar capacity", "Colorado River allocation"],
+      "narrative": "Sun-Belt growth turbocharged by TSMC chip fabs and data-center buildout. Phoenix housing supply is comparatively elastic (flat desert, permissive zoning) so rents rise but stay below CA/CO."
+    },
+    "AR": {
+      "name": "Arkansas",
+      "top_industries": ["Retail HQs (Walmart) + logistics", "Food processing (Tyson)", "Trucking (J.B. Hunt)", "Agriculture (rice, soybeans, poultry)"],
+      "resources": ["Bauxite (legacy)", "Natural gas (Fayetteville Shale)", "Timber"],
+      "narrative": "Three Fortune-500 HQs (Walmart, Tyson, J.B. Hunt) anchor the NW corner; rest of the state is rural agricultural. Rents low statewide; Bentonville/Rogers are pricier but still cheap by national standards."
+    },
+    "CA": {
+      "name": "California",
+      "top_industries": ["Tech (software + hardware + AI)", "Entertainment + media", "Agriculture (Central Valley)", "Tourism", "Aerospace (legacy)"],
+      "resources": ["Pacific coastline + ports", "Central Valley irrigated farmland", "Lithium (Salton Sea)", "Wine country"],
+      "narrative": "Tech-sector wage premiums concentrated in the Bay Area + LA, plus coastal land scarcity + restrictive single-family zoning, push coastal rents to the national high. Inland CA is much cheaper but population is coastal-skewed."
+    },
+    "CO": {
+      "name": "Colorado",
+      "top_industries": ["Tech (Denver-Boulder corridor)", "Aerospace + defense", "Tourism (skiing)", "Cannabis + craft brewing"],
+      "resources": ["Coal + natural gas (declining)", "Skiing infrastructure", "High-altitude agriculture"],
+      "narrative": "Tech-corridor migration from coastal high-cost states + ski-tourism pricing + outdoor-lifestyle demand drove Front Range rents up sharply 2018-2023. Mountain resort towns (Aspen, Vail) are extreme outliers."
+    },
+    "CT": {
+      "name": "Connecticut",
+      "top_industries": ["Insurance (Hartford)", "Hedge funds (Greenwich, Stamford)", "Defense manufacturing (submarines, helicopters)", "Higher ed"],
+      "resources": ["Long Island Sound coast", "Limited natural resources"],
+      "narrative": "NYC commuter county + Hartford insurance cluster + defense contractors. Old housing stock + restrictive zoning keep supply low; rents middle-to-high but stagnant population caps demand."
+    },
+    "DE": {
+      "name": "Delaware",
+      "top_industries": ["Banking (credit cards, post-1980 tax haven)", "Chemicals + pharmaceuticals (DuPont legacy)", "Corporate registrations"],
+      "resources": ["Atlantic coast", "Limited extractive resources"],
+      "narrative": "Tax-favorable corporate-law regime makes it the legal HQ of half the Fortune 500 (corporate registrations don't drive housing demand though). Real economy is finance + chemicals."
+    },
+    "DC": {
+      "name": "District of Columbia",
+      "top_industries": ["Federal government", "Government contracting", "Higher ed", "Lobbying + law firms"],
+      "resources": ["Federal payroll concentration"],
+      "narrative": "Single-employer (federal government) economy. Strict height limits on buildings + tightly bounded land area = chronic housing supply constraint. Rents near top nationally despite modest median income."
+    },
+    "FL": {
+      "name": "Florida",
+      "top_industries": ["Tourism (Disney, beaches, cruise)", "Real estate", "Aerospace (Cape Canaveral)", "Citrus + agriculture", "Healthcare (retirees)"],
+      "resources": ["Atlantic + Gulf coast", "Phosphate", "Citrus belt"],
+      "narrative": "Sun-Belt destination for retirees + remote workers + corporate relocations (no state income tax). Rapid pandemic-era rent surge; supply catching up but coastal land + insurance costs keep upward pressure."
+    },
+    "GA": {
+      "name": "Georgia",
+      "top_industries": ["Logistics (Atlanta airport hub, Port of Savannah)", "Film + entertainment", "Agriculture (peanuts, peaches, poultry)", "Banking (Atlanta)"],
+      "resources": ["Atlantic coast (Savannah port)", "Pine forestry", "Kaolin clay"],
+      "narrative": "Atlanta is the South's primary economic engine — logistics hub, Hollywood-of-the-South for tax credits, Coca-Cola/Delta/Home Depot HQs. Rents middle-tier, rising on Sun-Belt migration."
+    },
+    "HI": {
+      "name": "Hawaii",
+      "top_industries": ["Tourism", "Military (Pearl Harbor + Pacific Command)", "Agriculture (sugar legacy, coffee, macadamia)"],
+      "resources": ["Pacific isolation (also a constraint)", "Tropical agriculture", "Strategic Pacific location"],
+      "narrative": "Severe land-area constraint + isolation premium on imports + tourism demand drive the highest median rent in the country. Locals priced out by absentee mainland buyers."
+    },
+    "ID": {
+      "name": "Idaho",
+      "top_industries": ["Agriculture (potatoes, dairy, sugar beets)", "Tech (Micron)", "Tourism (Sun Valley, Sawtooths)", "Forestry"],
+      "resources": ["Snake River irrigation", "Silver + phosphate", "Forestland"],
+      "narrative": "Boise migration boom 2018-2023 from CA + WA pushed rents up faster than wages. State-level median is moderate but Boise metro is the outlier."
+    },
+    "IL": {
+      "name": "Illinois",
+      "top_industries": ["Finance + futures (Chicago)", "Manufacturing (machinery, food processing)", "Agriculture (corn, soybeans)", "Healthcare"],
+      "resources": ["Lake Michigan + Mississippi River", "Corn Belt", "Coal (declining)"],
+      "narrative": "Chicago anchors a major financial + commodities-trading hub; downstate is agricultural Midwest. Population shrinking; rents stable. Cook County property tax burden caps housing-price growth."
+    },
+    "IN": {
+      "name": "Indiana",
+      "top_industries": ["Manufacturing (auto parts, steel, RV's)", "Agriculture (corn, soy, hogs)", "Pharmaceuticals (Eli Lilly)", "Logistics"],
+      "resources": ["Steel (Gary)", "Limestone (Bedford)", "Coal"],
+      "narrative": "Manufacturing-heavy economy; Indianapolis healthcare-pharma cluster (Lilly) is the bright spot. Cheap land + cheap housing; one of the lowest rent burdens in the country."
+    },
+    "IA": {
+      "name": "Iowa",
+      "top_industries": ["Agriculture (corn, soy, pork)", "Insurance (Des Moines)", "Manufacturing (John Deere)", "Wind energy"],
+      "resources": ["Corn Belt prime farmland", "Wind capacity (#2 US)"],
+      "narrative": "Two pillars: agriculture (heavy ethanol consumption) + Des Moines insurance + financial services. Stable population, low rents, no urban pressure."
+    },
+    "KS": {
+      "name": "Kansas",
+      "top_industries": ["Aerospace (Wichita: Spirit, Textron)", "Agriculture (wheat, beef)", "Energy (oil + gas + wind)"],
+      "resources": ["Wheat belt", "Helium reserves", "Wind capacity"],
+      "narrative": "Wichita is the 'Air Capital of the World' (commercial aircraft assembly). Rest of state is agricultural Plains. Rents cheap; population flat."
+    },
+    "KY": {
+      "name": "Kentucky",
+      "top_industries": ["Auto manufacturing (Toyota Georgetown, Ford)", "Bourbon + horse breeding", "Coal (declining)", "Logistics (UPS Worldport in Louisville)"],
+      "resources": ["Coal (legacy)", "Bluegrass farmland", "Limestone aquifers (bourbon water)"],
+      "narrative": "Eastern KY (Appalachia) is coal-country distressed; central + western KY has manufacturing transplants + UPS hub. Rents low statewide."
+    },
+    "LA": {
+      "name": "Louisiana",
+      "top_industries": ["Oil + gas + petrochemicals", "Tourism (New Orleans)", "Seafood + agriculture (sugar, rice)", "Shipping (Port of South Louisiana)"],
+      "resources": ["Gulf oil + gas", "Mississippi River outflow + ports", "Seafood"],
+      "narrative": "Petrochemical corridor along the Mississippi + Gulf-Coast oil + the Port of South Louisiana (largest by tonnage in W. Hemisphere). New Orleans tourism is the consumer-facing slice. Rents low-to-middle; hurricane insurance is a real cost factor."
+    },
+    "ME": {
+      "name": "Maine",
+      "top_industries": ["Tourism + lobster fishing", "Forestry + paper (declining)", "Healthcare (largest single employer in many counties)"],
+      "resources": ["North Atlantic fishery", "Forestland", "Coastline"],
+      "narrative": "Lobster industry + summer tourism dominate the coast; paper-mill towns inland have declined. Coastal towns (Portland, Camden) priced like a small New-England city; inland is among the cheapest in the country."
+    },
+    "MD": {
+      "name": "Maryland",
+      "top_industries": ["Federal government + contracting (DC suburbs)", "Biotech + healthcare (Johns Hopkins, NIH)", "Aerospace + defense", "Port of Baltimore"],
+      "resources": ["Chesapeake Bay (seafood, ports)", "Dense biotech cluster"],
+      "narrative": "DC commuter belt drives the southern half (Montgomery + PG counties); Baltimore is its own depressed-but-recovering economy. Median rent high statewide due to DC-pull."
+    },
+    "MA": {
+      "name": "Massachusetts",
+      "top_industries": ["Higher ed (Harvard, MIT, +50 colleges)", "Healthcare + biotech (Kendall Sq, MGB)", "Tech (Boston-128 corridor)", "Finance (Fidelity, State Street)"],
+      "resources": ["Atlantic coast + ports", "Concentrated intellectual capital"],
+      "narrative": "Highest density of universities + research hospitals in the country drives biotech + tech wage premiums. Restrictive zoning + Cape-Cod summer-home demand push rents to top-quartile. Boston metro is the second-most expensive after the Bay Area."
+    },
+    "MI": {
+      "name": "Michigan",
+      "top_industries": ["Auto manufacturing (Big Three: GM, Ford, Stellantis)", "Higher ed (UMich)", "Agriculture (cherries, dairy)", "Tourism (Great Lakes)"],
+      "resources": ["Great Lakes freshwater (largest by surface)", "Iron ore (UP)", "Forestland"],
+      "narrative": "Auto industry is the historical core; Detroit decline lasted decades but recovery underway. Cheap housing relative to wages — Rust-Belt deflation effect. Ann Arbor (UMich) and Grand Rapids are pricier exceptions."
+    },
+    "MN": {
+      "name": "Minnesota",
+      "top_industries": ["Healthcare (Mayo Clinic, UnitedHealth)", "Manufacturing (3M, Medtronic)", "Mining (iron ore on the Iron Range)", "Agriculture (corn, soy, dairy)"],
+      "resources": ["Iron ore (declining)", "Lake Superior coastline + ports", "Forestland"],
+      "narrative": "Twin Cities anchors a diversified Fortune-500 cluster (UnitedHealth, Target, 3M, Medtronic, Best Buy). Rents middle-tier; Minneapolis-St Paul affordable for the size of the metro economy."
+    },
+    "MS": {
+      "name": "Mississippi",
+      "top_industries": ["Agriculture (cotton, soy, catfish)", "Manufacturing (Nissan, Toyota plants)", "Casinos (Tunica, Gulf Coast)"],
+      "resources": ["Mississippi River + Gulf coast", "Cotton belt", "Catfish ponds (#1 US producer)"],
+      "narrative": "Lowest median household income in the country; rents bottom-tier nationally. Recent manufacturing transplants (auto plants in Canton, Blue Springs) provide the bright spots."
+    },
+    "MO": {
+      "name": "Missouri",
+      "top_industries": ["Logistics (St. Louis, Kansas City)", "Aerospace + defense", "Agriculture (corn, soy, beef)", "Beer (AB-InBev)"],
+      "resources": ["Mississippi + Missouri River systems", "Lead mining (#1 US)"],
+      "narrative": "Two metros (KC, STL) dominate; rural MO is Plains/Ozarks agricultural. Logistics + aerospace + healthcare anchor metros. Rents middle-low; KC has had recent appreciation."
+    },
+    "MT": {
+      "name": "Montana",
+      "top_industries": ["Tourism (Yellowstone, Glacier)", "Agriculture (cattle, wheat)", "Mining (copper, gold, palladium)", "Energy"],
+      "resources": ["Yellowstone + Glacier National Parks", "Bakken oil (eastern)", "Hard-rock minerals"],
+      "narrative": "Bozeman + Whitefish + Big Sky boomed 2020-2023 on remote-work + amenity migration; rest of state remains rural-cheap. Most extreme rent-vs-wage divergence post-pandemic of any state."
+    },
+    "NE": {
+      "name": "Nebraska",
+      "top_industries": ["Agriculture (corn, beef, ethanol)", "Insurance (Berkshire Hathaway, Mutual of Omaha)", "Logistics (Union Pacific HQ)", "Manufacturing"],
+      "resources": ["Ogallala Aquifer + irrigated cropland", "Beef cattle (#1 US)"],
+      "narrative": "Omaha hosts Berkshire + Mutual of Omaha + Union Pacific. Rest of state is irrigated Plains agriculture. Stable, cheap, low population growth."
+    },
+    "NV": {
+      "name": "Nevada",
+      "top_industries": ["Tourism + gaming (Las Vegas)", "Mining (gold, silver, lithium)", "Tech + data centers (Reno area)", "Logistics"],
+      "resources": ["Gold (#1 US)", "Lithium (Thacker Pass)", "Geothermal capacity"],
+      "narrative": "Single-city economy (Las Vegas = 70% of state population) + mining boom in lithium for EVs + Tahoe-area tech migration. Rents middle-high in Vegas; rural counties cheap."
+    },
+    "NH": {
+      "name": "New Hampshire",
+      "top_industries": ["Manufacturing (precision, defense)", "Tourism (skiing, fall foliage)", "Tech + finance (Boston commuters)", "Higher ed"],
+      "resources": ["White Mountains + tourism", "Granite (state nickname)", "Limited extractive"],
+      "narrative": "No income tax + Boston-commuter belt = high in-migration from MA. Restrictive zoning + small total housing stock keep rents middle-tier despite small population."
+    },
+    "NJ": {
+      "name": "New Jersey",
+      "top_industries": ["Pharmaceuticals (Big Pharma cluster)", "Finance (Newark, Jersey City fintech)", "Logistics (Ports of NY/NJ)", "Higher ed (Princeton, Rutgers)"],
+      "resources": ["Atlantic coastline", "Port of NY-NJ (largest US East Coast)", "Pine Barrens"],
+      "narrative": "NYC + Philadelphia commuter state. Densest in the country; chronic housing supply pressure. Pharma cluster (Merck, J&J, Bristol-Myers) is the unique HQ concentration. Rents top-quartile."
+    },
+    "NM": {
+      "name": "New Mexico",
+      "top_industries": ["Federal labs (Los Alamos, Sandia)", "Oil + gas (Permian Basin extension)", "Tourism + arts (Santa Fe)", "Agriculture (chile, dairy)"],
+      "resources": ["Oil + gas (#2 US producer post-2022)", "Uranium (legacy)", "Solar capacity"],
+      "narrative": "Federal nuclear-research labs + Permian-Basin oil revenue subsidize the state budget; rural poverty persists. Santa Fe + Taos arts/tourism are pricey outliers; ABQ is mid; rural NM is cheap."
+    },
+    "NY": {
+      "name": "New York",
+      "top_industries": ["Finance (Wall St, fintech)", "Media + advertising", "Real estate", "Tourism", "Higher ed + healthcare"],
+      "resources": ["Atlantic coast + Hudson River + Erie Canal", "Wineries (Finger Lakes)"],
+      "narrative": "NYC metro is the global financial capital; upstate NY is Rust-Belt depressed (Buffalo, Rochester). Rent bimodal: NYC top-tier, upstate cheap. State median elevated by NYC weight."
+    },
+    "NC": {
+      "name": "North Carolina",
+      "top_industries": ["Tech (Research Triangle: Durham, Raleigh, Chapel Hill)", "Banking (Charlotte: BofA, Truist)", "Furniture + textiles (declining)", "Agriculture (tobacco legacy, hogs, poultry)"],
+      "resources": ["Atlantic coast", "Tobacco belt", "Hardwood forestry"],
+      "narrative": "Two distinct economic engines: Research Triangle tech/biotech and Charlotte banking. Rapid in-migration from coastal high-cost states. Rents rising fast; Charlotte and Raleigh-Durham now mid-tier nationally."
+    },
+    "ND": {
+      "name": "North Dakota",
+      "top_industries": ["Oil + gas (Bakken Shale)", "Agriculture (wheat, soybeans, sugar beets)", "Energy (wind + lignite coal)"],
+      "resources": ["Bakken oil", "Lignite coal", "Wind capacity"],
+      "narrative": "Bakken oil boom transformed the western half of the state 2010s; Williston rents spiked then normalized. Eastern ND remains farmland Plains. State median rent low; Bakken counties spike with oil prices."
+    },
+    "OH": {
+      "name": "Ohio",
+      "top_industries": ["Manufacturing (auto, steel, glass)", "Healthcare (Cleveland Clinic, OSU Med)", "Aerospace (Wright-Patterson AFB)", "Logistics"],
+      "resources": ["Lake Erie", "Coal (legacy)", "Marcellus + Utica natural gas"],
+      "narrative": "Three-C metros (Cleveland, Cincinnati, Columbus) anchor different economies — Columbus is the bright spot (state government + Ohio State + Honda + JPMorgan back-office). Cheap housing statewide; Rust-Belt classic."
+    },
+    "OK": {
+      "name": "Oklahoma",
+      "top_industries": ["Oil + gas", "Aerospace (Tulsa MRO, Tinker AFB)", "Agriculture (cattle, wheat)", "Native American gaming"],
+      "resources": ["Oil + gas (Anadarko Basin)", "Wind energy (#3 US)"],
+      "narrative": "Energy-state economy with significant Native sovereign-tribe land + gaming overlay. Cheap housing; OKC + Tulsa middle-low rents."
+    },
+    "OR": {
+      "name": "Oregon",
+      "top_industries": ["Tech (Intel + Nike, Silicon Forest)", "Forestry + wood products", "Wine (Willamette Valley)", "Tourism"],
+      "resources": ["Pacific coast", "Old-growth forestry", "Hydropower"],
+      "narrative": "Portland metro tech + creative-economy migration through 2019; recent slowdown + housing-policy shifts kept supply tight, rents top-quartile. Rural OR is forestry-depressed."
+    },
+    "PA": {
+      "name": "Pennsylvania",
+      "top_industries": ["Healthcare (UPMC, Geisinger, biggest single employer)", "Energy (Marcellus natural gas)", "Manufacturing (legacy steel + new advanced)", "Higher ed"],
+      "resources": ["Marcellus Shale (#2 US gas)", "Coal (legacy)", "Allegheny + Susquehanna river systems"],
+      "narrative": "Pittsburgh post-steel transformation into a healthcare + tech hub (UPMC + CMU); Philadelphia anchors a separate East-Coast metro economy. Rents middle-tier statewide; Pittsburgh remarkably cheap for a major metro."
+    },
+    "RI": {
+      "name": "Rhode Island",
+      "top_industries": ["Healthcare", "Higher ed (Brown, RISD)", "Tourism (Newport, beaches)", "Defense (Naval Station Newport)"],
+      "resources": ["Narragansett Bay", "Limited extractive"],
+      "narrative": "Smallest state, no major industry concentration. Boston commuter spillover + Providence universities + summer tourism. Rents middle-tier; old housing stock common."
+    },
+    "SC": {
+      "name": "South Carolina",
+      "top_industries": ["Manufacturing (BMW Spartanburg, Boeing Charleston, Volvo)", "Tourism (coast)", "Agriculture (cotton, peaches, tobacco)", "Logistics (Port of Charleston)"],
+      "resources": ["Atlantic coast (deepwater Charleston port)", "Pine forestry"],
+      "narrative": "European-auto and Boeing transplants to the upstate; Myrtle Beach + Hilton Head tourism on coast. Sun-Belt migration pushed Charleston rents up sharply 2020-2023."
+    },
+    "SD": {
+      "name": "South Dakota",
+      "top_industries": ["Tourism (Mt Rushmore, Black Hills, Sturgis)", "Agriculture (cattle, corn, soy)", "Healthcare (Sanford, Avera)", "Banking (credit-card backoffice in Sioux Falls)"],
+      "resources": ["Black Hills (gold, tourism)", "Wind capacity"],
+      "narrative": "Sioux Falls is the surprise — Citi/Wells Fargo credit-card operations relocated for usury-friendly state law in the 1980s. Rest of state Plains agricultural. Cheap rents."
+    },
+    "TN": {
+      "name": "Tennessee",
+      "top_industries": ["Auto manufacturing (Nissan, GM, Volkswagen)", "Healthcare (HCA in Nashville, Vanderbilt)", "Music + entertainment (Nashville)", "Logistics (FedEx in Memphis)"],
+      "resources": ["Tennessee River + TVA hydropower", "Coal (eastern, declining)"],
+      "narrative": "Nashville healthcare + music industry boom; Memphis FedEx hub; auto manufacturing spread across middle TN. Sun-Belt migration + no state income tax = rapid rent growth in Nashville and Knoxville."
+    },
+    "TX": {
+      "name": "Texas",
+      "top_industries": ["Oil + gas (Permian Basin)", "Tech (Austin: Tesla, Oracle, Apple)", "Aerospace (Houston, Dallas)", "Agriculture (cattle, cotton)", "Manufacturing"],
+      "resources": ["Permian Basin oil + gas (#1 US)", "Wind capacity (#1 US)", "Cattle ranching", "Gulf ports"],
+      "narrative": "Diversified mega-state — Permian oil + Houston petrochemicals + Austin tech + Dallas finance/logistics. Rapid in-migration from CA/NY; Austin rents now top-quartile. Land + permissive zoning keep state median moderate."
+    },
+    "UT": {
+      "name": "Utah",
+      "top_industries": ["Tech (Silicon Slopes: Adobe, Qualtrics, Domo)", "Tourism (national parks, skiing)", "Mining (copper, beryllium)", "Aerospace + defense"],
+      "resources": ["5 national parks", "Bingham Canyon copper mine", "Ski resorts"],
+      "narrative": "Salt Lake City + Lehi tech corridor + outdoor-recreation amenities + young high-fertility population = fastest economic growth in the country 2015-2023. Rents rising fast; Salt Lake metro now mid-high tier."
+    },
+    "VT": {
+      "name": "Vermont",
+      "top_industries": ["Tourism (skiing, fall foliage)", "Dairy + maple syrup", "Higher ed (UVM, Middlebury)", "Craft brewing"],
+      "resources": ["Green Mountains", "Maple syrup (#1 US)", "Granite + marble"],
+      "narrative": "Smallest Northeast state by population. Tourism + dairy + education economy. Burlington is the only city; rents middle-tier (small housing stock + zoning); rural VT remains cheap."
+    },
+    "VA": {
+      "name": "Virginia",
+      "top_industries": ["Federal government + defense contracting (Northern VA)", "Tech (data centers in Loudoun County)", "Tobacco + agriculture (legacy)", "Naval shipbuilding (Norfolk)"],
+      "resources": ["Atlantic coast (Norfolk, Hampton Roads)", "Coal (Appalachian, declining)", "Tobacco (legacy)"],
+      "narrative": "Two Virginias: Northern (DC suburbs, defense contractors, the world's largest data-center cluster) and Rest (rural-cheap, Appalachian poverty in the SW). State median rent driven up by NoVa."
+    },
+    "WA": {
+      "name": "Washington",
+      "top_industries": ["Tech (Microsoft, Amazon, Meta NW)", "Aerospace (Boeing legacy + R&D)", "Coffee (Starbucks)", "Agriculture (apples, wheat, wine)"],
+      "resources": ["Pacific coast + ports (Seattle/Tacoma)", "Hydropower (Columbia River, cheapest electricity)", "Apples (#1 US)", "Timber"],
+      "narrative": "Seattle tech + Boeing legacy = high-wage cluster; cheap hydroelectricity + tech demand makes WA a top data-center state. Eastern WA is agricultural. Coastal rents top-tier; eastern WA cheap."
+    },
+    "WV": {
+      "name": "West Virginia",
+      "top_industries": ["Coal (declining)", "Healthcare (largest single employer)", "Chemicals (legacy Dow + Union Carbide)", "Tourism (New River Gorge)"],
+      "resources": ["Coal (declining)", "Marcellus + Utica natural gas", "Forestland"],
+      "narrative": "Coal-state collapse + opioid epidemic + population decline. Lowest median rent in the country. Recent natural-gas activity provides some economic offset; cultural Appalachia core."
+    },
+    "WI": {
+      "name": "Wisconsin",
+      "top_industries": ["Manufacturing (paper, machinery, motors)", "Dairy + cheese (#1 US dairy + cheese)", "Beer (Miller-Coors legacy)", "Healthcare"],
+      "resources": ["Lake Superior + Lake Michigan coast", "Dairy land", "Cranberries (#1 US)"],
+      "narrative": "Manufacturing-heavy + dairy-belt; Milwaukee + Madison are the metros. Rust-Belt-ish but more diversified than MI/OH. Cheap rents, stable population."
+    },
+    "WY": {
+      "name": "Wyoming",
+      "top_industries": ["Energy (coal, oil + gas, uranium)", "Tourism (Yellowstone, Grand Teton)", "Agriculture (cattle, sheep, wool)"],
+      "resources": ["Coal (#1 US producer)", "Oil + gas + uranium + trona", "Yellowstone (3% of state)"],
+      "narrative": "Smallest population in the country; energy-extraction-dominated economy. No income tax + LLC-friendly law + wealthy ranch-buyer migration in Teton County. Jackson is extreme outlier (2nd highest median home price in US); rest of state cheap."
+    }
+  }
+}

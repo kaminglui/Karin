@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Facts · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>Facts</h1>
+      <span id="subtitle" class="subtitle"></span>
+    </header>
+
+    <div class="facts-controls" role="group" aria-label="Facts query">
+      <label class="facts-control" for="facts-year-input">
+        <span>Year</span>
+        <input type="number" id="facts-year-input"
+               min="1960" max="2026" step="1"
+               inputmode="numeric"
+               aria-label="Year to summarize">
+      </label>
+      <label class="facts-control" for="facts-region-select">
+        <span>Region</span>
+        <select id="facts-region-select" aria-label="Region for breakdown">
+          <option value="">— world only —</option>
+          <option value="us">United States</option>
+          <option value="hk_sar">Hong Kong SAR, China</option>
+          <option value="cn_mainland">China (Mainland)</option>
+          <option value="japan">Japan</option>
+          <option value="south_korea">South Korea</option>
+        </select>
+      </label>
+      <button type="button" id="facts-lookup-btn" class="facts-go-btn">
+        Look up
+      </button>
+    </div>
+
+    <!-- Quick-pick chips: clicking one fills the year and runs immediately.
+         Curated to interesting decades + a special-now button. -->
+    <div class="facts-quickpicks" role="toolbar" aria-label="Quick year picks">
+      <button type="button" class="chip-btn" data-quick-year="1969">1969</button>
+      <button type="button" class="chip-btn" data-quick-year="1985">1985</button>
+      <button type="button" class="chip-btn" data-quick-year="1990">1990</button>
+      <button type="button" class="chip-btn" data-quick-year="2001">2001</button>
+      <button type="button" class="chip-btn" data-quick-year="2010">2010</button>
+      <button type="button" class="chip-btn" data-quick-year="2020">2020</button>
+    </div>
+
+    <!-- Sub-page link to the ALICE estimator. ALICE is US-specific, so
+         the link is most relevant when the user is browsing US data —
+         but kept always-visible since the Facts default region is "world
+         only" and we don't want to hide the entry point. The
+         data-panel-target hooks into the cross-frame nav handler in
+         panels.js so clicking inside the iframe swaps the parent's
+         popup overlay (and bottom-nav indicator) to /ui/alice. -->
+    <div class="facts-related" role="navigation" aria-label="Related estimators">
+      <a class="facts-related-link" href="/ui/alice"
+         data-panel-target="/ui/alice"
+         title="ALICE = Asset Limited, Income Constrained, Employed (US working-poor)">
+        <span class="facts-related-emoji" aria-hidden="true">🏠</span>
+        <span class="facts-related-label">View US ALICE estimate →</span>
+      </a>
+    </div>
+
+    <!-- Facts panel renders here (mountFactsPanel manages this node). -->
+    <div id="facts-panel-root"></div>
+  </div>
+
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/panels.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/facts.js?v={{ASSET_VERSION}}"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const root = document.getElementById("facts-panel-root");
+      const subtitle = document.getElementById("subtitle");
+      const yearInput = document.getElementById("facts-year-input");
+      const regionSelect = document.getElementById("facts-region-select");
+      const lookupBtn = document.getElementById("facts-lookup-btn");
+
+      // Default year: latest reasonable (current year - 1 if current is
+      // partial, or pick a decade-anchor like 1985 as a curated default).
+      // Use last completed year so all sections (population, wages,
+      // items) tend to have data.
+      const currentYear = new Date().getFullYear();
+      yearInput.max = String(currentYear);
+      yearInput.value = String(currentYear - 1);
+
+      let controller = null;
+
+      function load() {
+        const y = parseInt(yearInput.value, 10);
+        const region = regionSelect.value || null;
+        if (!Number.isFinite(y) || y < 1960 || y > currentYear) {
+          subtitle.textContent = "pick a year between 1960 and the current year";
+          return;
+        }
+        if (controller && controller.unmount) controller.unmount();
+        controller = Facts.mountFactsPanel(root, {
+          year: y,
+          region: region,
+          onSubtitle: (text) => { subtitle.textContent = text; },
+        });
+      }
+
+      lookupBtn.addEventListener("click", load);
+      yearInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); load(); }
+      });
+      regionSelect.addEventListener("change", load);
+
+      // Quick-pick chips: clicking sets the year and triggers a load.
+      document.querySelectorAll("[data-quick-year]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          yearInput.value = btn.dataset.quickYear;
+          load();
+        });
+      });
+
+      // Auto-load with the default year on first render.
+      load();
+    });
+  </script>
+</body>
+</html>

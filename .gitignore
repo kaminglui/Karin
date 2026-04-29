@@ -1,0 +1,168 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.vs/
+*.swp
+*~
+*.bak
+*.orig
+
+# --- Tool & agent working dirs (local, ephemeral) ---
+.claude/
+.cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.ipynb_checkpoints/
+
+# --- Runtime / temp ---
+*.log
+logs/
+tmp/
+# Terminal capture files (may contain Tailscale hostnames, local IPs, etc.)
+deploy_history.txt
+*_history.txt
+
+# --- Third-party sources cloned by deploy/setup.sh ---
+third_party/
+
+# --- Large model artifacts (not checked in to git) ---
+# Use Git LFS or a separate model registry if you need these in-tree.
+voice_training/export/*.ckpt
+voice_training/export/*.pth
+voice_training/_OTHER/
+# The reference audio clip is a PERSONAL VOICE RECORDING. Gitignored
+# so it never accidentally lands in a public repo. Keep a copy outside
+# the repo as a backup; the TTS server reads it from this path at
+# runtime. (Previously tracked with !ref.wav exception — removed for
+# privacy.)
+voice_training/export/ref.wav
+
+# --- Training-time tooling (fully local, never committed) ---
+# The entire helper/ directory is personal training workflow — not tracked.
+helper/
+
+# --- All runtime data (catch-all) ---
+# Every subsystem writes to data/<name>/; none of it belongs in git.
+# Specific sub-entries below are kept for documentation — the catch-all
+# is the actual gate.
+data/
+
+# bridge/data/ is the exception: it ships reference baselines that the
+# data tools (alice, inflation, population, facts, analyze, county,
+# map) need to function. CI and fresh clones can't run those tools —
+# nor the tests for them — without these files. Only the runtime fetch
+# status sidecars stay ignored.
+!bridge/data/
+!bridge/data/**
+bridge/data/**/_last_fetch_status.json
+
+# --- News subsystem runtime data (JSON ledger + event log) ---
+bridge/news/data/
+
+# --- News subsystem user preferences (personal curation) ---
+# Keep preferences.example.json in-tree as a template.
+bridge/news/config/preferences.json
+
+# --- Tracker subsystem runtime data + user-curated config ---
+# trackers.example.json stays in tree as a template; trackers.json
+# and tracker_preferences.json are personal.
+bridge/trackers/data/
+bridge/trackers/config/trackers.json
+bridge/trackers/config/tracker_preferences.json
+
+# --- Alerts subsystem runtime data ---
+bridge/alerts/data/
+
+# --- API keys for optional third-party services ---
+config/api_keys.json
+
+# --- Tuning overrides (optional; defaults are in code) ---
+config/tuning.yaml
+
+# --- Calendar config (contains calendar names, not URLs — URLs in env) ---
+config/calendar.yaml
+
+# --- Notification routing rules (optional; defaults in code) ---
+config/notify.yaml
+
+# --- Private character files ---
+config/characters/_*.yaml
+characters/_*/
+# Per-character persona + voice metadata. Each user/deployment tends
+# to want their own persona text, and the reference-audio metadata
+# (prompt_lang etc.) is tied to whichever clip the operator dropped
+# in voices/. Ship a voice.example.yaml template per character dir
+# instead if you want a committed starter.
+characters/*/voice.yaml
+# Exception: the neutral text-only fallback ships with the repo so
+# fresh clones always have at least one dropdown option and a valid
+# default persona. Do NOT add voices/ under this directory — keeping
+# it text-only is the whole point.
+!characters/default/voice.yaml
+
+# --- Per-character voice model files (large binaries) ---
+characters/*/voices/*.ckpt
+characters/*/voices/*.pth
+characters/*/voices/*.wav
+
+# --- Personal characters (created per-deploy, not shipped) ---
+# `general` is the operator's primary character on this box (custom
+# face palette + voice bundle + per-vowel expressions). Don't track
+# any of it — fresh clones get the neutral `default` character + the
+# `template` scaffolding only. Add new private characters here (or
+# prefix with `_` to use the `characters/_*/` rule above).
+characters/general/
+
+# Per-vowel face renders for the `karin` character are personal
+# portraits — keep them out of the public repo. The default
+# character's procedural-sun face renders without PNGs, and
+# web/static/faces/ ships neutral placeholder PNGs for the legacy
+# code-path fallback.
+characters/karin/expressions/
+
+# --- Archived/deprecated layouts (kept locally, never committed) ---
+# Example: _backup/phonetic_expressions/ superseded by
+# characters/<name>/expressions/. Use this dir for anything you want
+# to keep on disk as a fallback but not track in git.
+_backup/
+
+# --- SFT pipeline (LoRA training) ---
+# Local copies of Colab run outputs (GGUFs, adapters). Drive is the
+# canonical home — this is just for Jetson deployment staging.
+sft/runs/
+# Built dataset artifacts — produced by sft/scripts/build_dataset.py,
+# uploaded to Drive for Colab to consume. All per-iteration variants
+# (.iter4, .iter5, .iter6, .iter7, future .iter8…) are large binary
+# blobs containing training examples; keep them local only.
+sft/sft_dataset.tar
+sft/sft_dataset.tar.*
+sft/sft_dataset.arrow/
+sft/sft_dataset.arrow.*/
+sft/dataset.arrow/
+
+# --- Stray staging / scratch adapter dirs ---
+# Historical download-and-stage area used before sft/runs/ became the
+# canonical layout. Nothing in code references these paths. Safe to
+# delete; gitignored so any stragglers don't get committed.
+stuff/
+/run_*/
+/colab_sft_*/
+sft/colab_sft.ipynb.backup
+
+# --- Maintainer-only docs ---
+# RUNBOOK.dev.md has dev-machine-specific flows (pre-push tar+scp,
+# wipe-and-reprovision recipe, HF upload commands). Not shipped so the
+# public repo's RUNBOOK.md stays focused on clone-and-deploy.
+RUNBOOK.dev.md

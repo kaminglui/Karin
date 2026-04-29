@@ -1,0 +1,28 @@
+{
+  "type": "procedural-sun",
+  "label": "Default",
+  "body": "#8b9bb0",
+  "eyes": "#2b3644",
+  "mouth": "#2b3644",
+  "theme": {
+    "accent": "#8b9bb0",
+    "accent_glow": "rgba(139, 155, 176, 0.35)",
+    "gradient_from": "#5a6b80",
+    "gradient_to": "#c0cfe0"
+  },
+  "aura": {
+    "color": "#8b9bb0",
+    "ring_border_px": 2,
+    "pulse_scale_from": 1.0,
+    "pulse_scale_to": 1.18,
+    "pulse_ms": 1100
+  },
+  "mouth_shapes": {
+    "default": {"rx": 5, "ry": 1, "cy": 0},
+    "a": {"rx": 7, "ry": 6, "cy": 2},
+    "e": {"rx": 8, "ry": 3, "cy": 1},
+    "i": {"rx": 9, "ry": 1, "cy": 0},
+    "o": {"rx": 5, "ry": 5, "cy": 2},
+    "u": {"rx": 4, "ry": 4, "cy": 2}
+  }
+}

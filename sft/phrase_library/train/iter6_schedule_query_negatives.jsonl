@@ -1,0 +1,5 @@
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Walk me through my schedule for today."}, {"role": "assistant", "content": "I don't have calendar access — can't pull your day. Want me to set a reminder instead?"}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "What's on my agenda today?"}, {"role": "assistant", "content": "Can't see your agenda from here. What's coming up that I can help with?"}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Any appointments this week?"}, {"role": "assistant", "content": "I don't have access to your appointments. Want me to remind you about one?"}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "Do I have any meetings today?"}, {"role": "assistant", "content": "Calendar isn't wired up on my side. If you tell me, I can set nudges."}]}
+{"messages": [{"role": "system", "content": "{{SYSTEM}}"}, {"role": "user", "content": "What does my day look like?"}, {"role": "assistant", "content": "I can't see your calendar, but happy to help plan it if you fill me in."}]}

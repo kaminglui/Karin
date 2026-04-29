@@ -1,0 +1,159 @@
+# Per-model tuning overrides.
+#
+# The active LLM is picked by `llm.model` in assistant.yaml (overridable
+# via KARIN_LLM_MODEL env). This file lets us keep model-specific knobs
+# in one place instead of scattered through llm.py constants and env
+# vars. Entries in `models.<tag>` override the `defaults` block for the
+# matching tag; unknown tags fall back to `defaults`.
+#
+# To tune a model: add / edit its entry here and `docker compose up -d
+# --force-recreate web`. No source edits needed.
+#
+# Knobs:
+#   max_per_tool    — cap on same-tool calls per turn (bigger models
+#                     handle >1 reliably; 3B-class needs 1)
+#   max_tool_iters  — cap on tool-loop iterations per turn (1 iter = up
+#                     to N tool calls → model response)
+#   temperature     — decoding temperature (passed into options.temperature)
+#   num_ctx         — context window in tokens (KV cost is linear)
+#   think           — Qwen3-family thinking mode. "off" drops 700+
+#                     thinking tokens per turn (huge latency win)
+#   request_timeout — per-HTTP-call seconds; bigger models need more
+#   history_pairs   — keep only the last N user+assistant turn PAIRS in
+#                     prompt context. Prevents cross-turn bleed (e.g.
+#                     "weather in Hong Kong" leaking into the next
+#                     turn's "what should I wear"). 0 means unlimited.
+#                     Compaction is still applied on top of this cap.
+
+defaults:
+  max_per_tool: 1
+  max_tool_iters: 5
+  temperature: 0.3
+  num_ctx: 3072
+  think: "off"
+  request_timeout: 300
+  history_pairs: 3
+
+models:
+  "qwen2.5:3b":
+    # Current Orin-Nano default. Tool-call JSON is clean, but the model
+    # gets confused calling the same tool twice, so cap at 1.
+    temperature: 0.3
+    num_ctx: 3072
+
+  "huihui_ai/qwen3.5-abliterated:4b":
+    # Newer Qwen3.5 architecture, abliterated (refusal direction
+    # removed). Larger context budget for synthesis turns; fewer iters
+    # since it's slower per call (~2x latency of the 3b).
+    temperature: 0.35
+    num_ctx: 4096
+    max_tool_iters: 4
+    request_timeout: 420
+
+  "huihui_ai/qwen3-abliterated:4b":
+    # Fallback if 3.5 variant has tool-calling reliability issues.
+    temperature: 0.3
+    num_ctx: 4096
+    max_tool_iters: 4
+    request_timeout: 420
+
+  "qwen3:4b":
+    # Stock Qwen3 4B (non-abliterated). NOTE: this variant ignores
+    # think:false — streams CoT into content. Prefer qwen3.5:4b below.
+    temperature: 0.3
+    num_ctx: 4096
+    max_tool_iters: 4
+    request_timeout: 420
+
+  "qwen3.5:4b":
+    # Stock Qwen3.5 4B (non-abliterated equivalent of huihui_ai/qwen3.5-
+    # abliterated:4b). Same base weights; refusal direction intact. Ollama
+    # tags it with "tools" + "thinking" natively. think:false is respected.
+    temperature: 0.3
+    num_ctx: 4096
+    max_tool_iters: 4
+    request_timeout: 420
+
+  "huihui_ai/qwen2.5-abliterate:7b":
+    # Biggest model we can fit with voice off. Allow a bit more
+    # chaining since tool-call JSON is reliable on 7B Qwen2.5.
+    # Persona warning: heavy RLHF means Karin's casual voice drifts
+    # toward formal "API-response" style; use at own risk.
+    temperature: 0.3
+    num_ctx: 3072
+    max_per_tool: 2
+    max_tool_iters: 5
+    request_timeout: 600
+
+  "dolphin-llama3:8b":
+    # NOTE: does NOT support tools in Ollama (capabilities=['completion']
+    # only). Keep entry for reference; don't set as active model.
+    temperature: 0.3
+    num_ctx: 3072
+    max_per_tool: 2
+    max_tool_iters: 5
+    request_timeout: 600
+
+  "dolphin3:8b":
+    # NOTE: also lacks 'tools' capability in Ollama manifest. Same issue
+    # as dolphin-llama3 — the modelfile template doesn't declare tool
+    # support. Not usable for Karin without a custom Modelfile wrap.
+    temperature: 0.3
+    num_ctx: 3072
+    request_timeout: 600
+
+  "hermes3:8b":
+    # Nous Research's Hermes 3 on Llama 3 8B. Advertised as "more
+    # powerful and reliable function calling and structured output."
+    # Personality-friendly RLHF; designed for roleplay/assistant
+    # character retention. 4.7 GB.
+    temperature: 0.3
+    num_ctx: 3072
+    max_per_tool: 2
+    max_tool_iters: 5
+    request_timeout: 600
+
+  "mistral:7b":
+    # Stock Mistral 7B Instruct. Classic strong baseline, tool-calling
+    # supported via Ollama. 4.1 GB — smallest 7B-class option.
+    temperature: 0.3
+    num_ctx: 3072
+    max_per_tool: 2
+    max_tool_iters: 5
+    request_timeout: 600
+
+  "llama3.1:8b":
+    # Meta's Llama 3.1 8B Instruct. Native tool-calling support.
+    # Less formal voice than Qwen2.5 7B in our earlier testing. 4.9 GB.
+    temperature: 0.3
+    num_ctx: 3072
+    max_per_tool: 2
+    max_tool_iters: 5
+    request_timeout: 600
+
+  "mannix/llama3.1-8b-abliterated:tools-q4_k_m":
+    # Abliterated Llama 3.1 8B with explicit tools template. Refusal
+    # direction ablated; keeps tool-calling grammar. With A+B+C
+    # (routing regex + hint wording + schedule_reminder desc cleanup)
+    # it lands at 95.7% routing accuracy, matching stock llama3.1 8b.
+    # num_ctx tuned down 3072 -> 2048: Karin's single-turn prompt fits
+    # comfortably under 2048 tokens (system + user + tool definitions
+    # total ~1500), and compaction handles multi-turn overflow at
+    # ~50% of num_ctx anyway. Smaller KV cache = faster prefill per
+    # turn on the Jetson's memory-bound inference. 4.9 GB weights.
+    temperature: 0.3
+    num_ctx: 2048
+    max_per_tool: 2
+    max_tool_iters: 5
+    request_timeout: 600
+
+  "mannix/llama3.1-8b-abliterated:tools-iq4_xs":
+    # Same weights as tools-q4_k_m above but with an i-matrix IQ4_XS
+    # quant — ~12% smaller on disk, potentially faster inference on
+    # memory-bandwidth-bound hardware like the Jetson. Tuning matches
+    # the sibling entry so comparisons are apples-to-apples.
+    temperature: 0.3
+    num_ctx: 2048
+    max_per_tool: 2
+    max_tool_iters: 5
+    request_timeout: 600

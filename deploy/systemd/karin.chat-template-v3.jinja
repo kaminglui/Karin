@@ -1,0 +1,71 @@
+{#-
+  V3 — hybrid: V2.5's JSON-format coaching at last user turn PLUS V2's terse
+  `name(params): description` per-tool rendering. Gives the LoRA both the
+  "emit JSON" trigger AND the arg names + tool descriptions it was trained
+  to see. Ollama's full-schema TEMPLATE is ~2400 tokens; V3 targets ~600.
+
+  Expected fix for V2.5's 29/38 regression: missing descriptions caused
+  over-firing on figurative prompts ("Schedule conflicts are the worst"),
+  and missing arg names caused `convert` to emit {from, to, amount}
+  instead of {value, from_unit, to_unit}.
+
+  Assistant tool_calls rendering identical to V1/V2/V2.5.
+-#}
+{%- if messages -%}
+{%- set has_system = (messages[0].role == 'system') -%}
+{%- if has_system or tools -%}
+<|start_header_id|>system<|end_header_id|>
+{%- if has_system %}
+
+{{ messages[0].content }}
+{%- endif %}
+{%- if tools %}
+
+You are a helpful assistant with tool calling capabilities. When you receive a tool call response, use the output to format an answer to the orginal use question.
+{%- endif %}<|eot_id|>
+{%- endif -%}
+{%- set dialog = messages[1:] if has_system else messages -%}
+{%- for message in dialog -%}
+{%- if message.role == 'user' -%}
+<|start_header_id|>user<|end_header_id|>
+{%- if tools and loop.last %}
+
+Given the following tools, please respond with a JSON for a function call with its proper arguments that best answers the given prompt. Respond in the format {"name": function name, "parameters": dictionary of argument name and its value}. Do not use variables.
+
+Tools:
+{% for t in tools -%}
+{%- set fn = t.function if t.function is defined else t -%}
+- {{ fn.name }}({% if fn.parameters and fn.parameters.properties %}{{ fn.parameters.properties.keys() | join(', ') }}{% endif %}): {{ fn.description | default('', true) }}
+{% endfor -%}
+{%- endif %}
+
+{{ message.content }}<|eot_id|>{% if loop.last %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}
+{%- elif message.role == 'assistant' -%}
+<|start_header_id|>assistant<|end_header_id|>
+{%- if message.tool_calls %}
+
+{% for tc in message.tool_calls -%}
+{"name": "{{ tc.function.name }}", "parameters": {{ tc.function.arguments | tojson if tc.function.arguments is mapping else tc.function.arguments }}}
+{%- endfor %}
+{%- else %}
+
+{{ message.content }}{% if not loop.last %}<|eot_id|>{% endif %}
+{%- endif -%}
+{%- elif message.role == 'tool' -%}
+<|start_header_id|>ipython<|end_header_id|>
+
+{{ message.content }}<|eot_id|>{% if loop.last %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- else -%}
+{%- if system %}<|start_header_id|>system<|end_header_id|>
+
+{{ system }}<|eot_id|>{% endif %}{% if prompt %}<|start_header_id|>user<|end_header_id|>
+
+{{ prompt }}<|eot_id|>{% endif %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}

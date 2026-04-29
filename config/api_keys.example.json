@@ -1,0 +1,65 @@
+{
+  "_comment": "Template for third-party API keys used by optional tools. Copy this file to api_keys.json (gitignored) and fill in the keys you want to enable. Tools degrade gracefully when a key is missing — they either fall back to a no-key alternative or disable themselves.",
+
+  "_how_to_use": "All keys are optional. Leave any slot as an empty string to disable that tool. The code reads this file via bridge/api_keys.py; add new slot names there when adding new tools.",
+
+  "brave_search": {
+    "_description": "Brave Search API — web search with better quality than DuckDuckGo scraping. Free tier: 2,000 queries/month. Used as fallback or primary for web_search.",
+    "_signup": "https://brave.com/search/api/",
+    "api_key": ""
+  },
+
+  "spoonacular": {
+    "_description": "Spoonacular — recipe lookup + ingredient parsing. Free tier: 150 requests/day. Enables the recipe tool/widget (currently not shipped; needs a key to land).",
+    "_signup": "https://spoonacular.com/food-api",
+    "api_key": ""
+  },
+
+  "openweathermap": {
+    "_description": "OpenWeatherMap — alternative weather source with hourly forecast + air quality. Free tier: 1,000 calls/day. Current weather goes through Open-Meteo (no key); this is for richer data.",
+    "_signup": "https://openweathermap.org/api",
+    "api_key": ""
+  },
+
+  "newsapi": {
+    "_description": "NewsAPI.org — aggregated news from 80k+ sources. Free tier: 100 requests/day, non-commercial. Supplements our RSS-only feeds with more breadth.",
+    "_signup": "https://newsapi.org/",
+    "api_key": ""
+  },
+
+  "tavily": {
+    "_description": "Tavily Search — search API tuned for LLM retrieval (returns summaries, not just links). Free tier: 1,000 credits/month. Drop-in replacement for web_search with better result quality.",
+    "_signup": "https://tavily.com/",
+    "api_key": ""
+  },
+
+  "alpha_vantage": {
+    "_description": "Alpha Vantage — stocks, ETFs, crypto, forex. Free tier: 25 requests/day. Extends the tracker subsystem with live equities.",
+    "_signup": "https://www.alphavantage.co/support/#api-key",
+    "api_key": ""
+  },
+
+  "bls": {
+    "_description": "Bureau of Labor Statistics — CPI, unemployment, etc. Works without a key at 25 req/day; with a free key you get 500 req/day. Used by the tracker subsystem.",
+    "_signup": "https://data.bls.gov/registrationEngine/",
+    "api_key": ""
+  },
+
+  "huggingface": {
+    "_description": "Hugging Face Hub token — used for rate-limited model/snapshot downloads (GPT-SoVITS pretrained models, faster-whisper weights). Works without token but much slower/throttled.",
+    "_signup": "https://huggingface.co/settings/tokens",
+    "api_key": ""
+  },
+
+  "anthropic": {
+    "_description": "Anthropic API — optional remote Claude LLM. Useful for comparing quality vs local Qwen during dev. Not required for the normal voice loop.",
+    "_signup": "https://console.anthropic.com/",
+    "api_key": ""
+  },
+
+  "openai": {
+    "_description": "OpenAI API — optional remote GPT LLM. Same role as anthropic above; dev-only, not in the voice loop.",
+    "_signup": "https://platform.openai.com/api-keys",
+    "api_key": ""
+  }
+}

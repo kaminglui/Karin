@@ -1,0 +1,416 @@
+{
+  "model": "karin-tuned:latest",
+  "base_url": "http://localhost:11434",
+  "passed": 34,
+  "total": 38,
+  "pass_rate": 0.8947368421052632,
+  "cases": [
+    {
+      "prompt": "What is Mount Fuji famous for?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "Mount Fuji"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 30.679
+    },
+    {
+      "prompt": "Hello!",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.734
+    },
+    {
+      "prompt": "Hi Karin.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 9.16
+    },
+    {
+      "prompt": "Thanks, that's all I needed.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.018
+    },
+    {
+      "prompt": "What's your name?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.966
+    },
+    {
+      "prompt": "Look up quantum computing on Wikipedia.",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "quantum computing"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 25.515
+    },
+    {
+      "prompt": "Remember that time we went hiking last summer?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.059
+    },
+    {
+      "prompt": "Call me when you're free.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.992
+    },
+    {
+      "prompt": "Forget what I said about batteries.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.981
+    },
+    {
+      "prompt": "The gold standard of debugging is print statements.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.041
+    },
+    {
+      "prompt": "What's the weather and the news?",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected get_weather, got <no tool>",
+      "latency_s": 16.002
+    },
+    {
+      "prompt": "Remind me to check the gold price tomorrow at 9am.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected schedule_reminder, got <no tool>",
+      "latency_s": 16.003
+    },
+    {
+      "prompt": "Convert 100 usd to jpy and 5 miles to km.",
+      "expected_tool": "convert",
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "to_unit": "jpy",
+        "value": "100",
+        "from_unit": "usd"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 29.075
+    },
+    {
+      "prompt": "History of the gold standard.",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "Gold Standard"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 22.113
+    },
+    {
+      "prompt": "How many miles is it from NYC to LA?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.03
+    },
+    {
+      "prompt": "What's the weather in San Francisco?",
+      "expected_tool": "get_weather",
+      "expected_args": {
+        "location": "san francisco"
+      },
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "San Francisco"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 25.698
+    },
+    {
+      "prompt": "Convert 100 usd to jpy.",
+      "expected_tool": "convert",
+      "expected_args": {
+        "value": "100",
+        "from_unit": "usd",
+        "to_unit": "jpy"
+      },
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "100",
+        "from_unit": "usd",
+        "to_unit": "jpy"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 26.91
+    },
+    {
+      "prompt": "Thanks!",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 7.921
+    },
+    {
+      "prompt": "My favorite memory is our camping trip.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.983
+    },
+    {
+      "prompt": "Schedule conflicts are the worst.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.009
+    },
+    {
+      "prompt": "Set aside some time for yourself.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.072
+    },
+    {
+      "prompt": "How's everybody doing this morning?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.999
+    },
+    {
+      "prompt": "Tell me a joke.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.041
+    },
+    {
+      "prompt": "Cancel that.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.022
+    },
+    {
+      "prompt": "Tell me about my schedule today.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 9.55
+    },
+    {
+      "prompt": "How much is a dollar in 1970 money?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected wiki, got <no tool>",
+      "latency_s": 15.968
+    },
+    {
+      "prompt": "What's the exchange rate history for USD/JPY?",
+      "expected_tool": "tracker",
+      "expected_args": null,
+      "actual_tool": "tracker",
+      "actual_args": {
+        "id": "usd_jpy",
+        "period": ""
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 22.181
+    },
+    {
+      "prompt": "Remember Mount Everest?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.984
+    },
+    {
+      "prompt": "What's the truth about resistors?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.046
+    },
+    {
+      "prompt": "Good morning.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.889
+    },
+    {
+      "prompt": "Hey there.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.404
+    },
+    {
+      "prompt": "What's up?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 10.292
+    },
+    {
+      "prompt": "Have a good one.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.03
+    },
+    {
+      "prompt": "Cool, thanks.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.077
+    },
+    {
+      "prompt": "Got it.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 9.355
+    },
+    {
+      "prompt": "I forgot what I was going to say.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.055
+    },
+    {
+      "prompt": "Let's convert this argument into a conversation.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.959
+    },
+    {
+      "prompt": "What's the time zone in Tokyo?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "get_time",
+      "actual_args": {
+        "timezone": "Asia/Tokyo"
+      },
+      "passed": false,
+      "reason": "expected wiki, got get_time",
+      "latency_s": 19.042
+    }
+  ]
+}

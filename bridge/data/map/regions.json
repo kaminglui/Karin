@@ -1,0 +1,57 @@
+{
+  "_metadata": {
+    "version": 1,
+    "data_as_of": "2026-04-27",
+    "notes": "Curated historical/economic region memberships for the US choropleth overlay. State-level approximations of regions that are mostly defined sub-state in reality (a state is in 'Appalachia' if any sizable part of its territory is, etc.). Edit this file when better definitions surface; nothing fetches it. The federally-defined regions (Appalachia per ARC) are taken from the ARC; the cultural/historical ones (Rust Belt, Sun Belt, Black Belt, Tech Corridors) are conventional usage with some states arguably borderline."
+  },
+  "regions": {
+    "rust_belt": {
+      "label": "Rust Belt",
+      "color": "#b45309",
+      "description": "Mid-Atlantic and Midwest states whose 20th-century manufacturing base (steel, autos, glass, machinery) declined sharply post-1970. Population stagnant or shrinking; rents reflect weak demand + abundant older housing stock.",
+      "states": ["PA", "OH", "MI", "IN", "IL", "WI", "NY", "WV", "MO"]
+    },
+    "sun_belt": {
+      "label": "Sun Belt",
+      "color": "#ea580c",
+      "description": "Southern + southwestern states with rapid post-1970 population growth driven by air-conditioning, retiree migration, lower taxes, and (more recently) tech/financial-services relocations from coastal high-cost states. Rents rising fast on supply pressure.",
+      "states": ["FL", "GA", "TX", "AZ", "NM", "AL", "MS", "LA", "SC", "NC", "TN", "CA", "NV"]
+    },
+    "appalachia": {
+      "label": "Appalachia (ARC)",
+      "color": "#16a34a",
+      "description": "Federal Appalachian Regional Commission definition — mountain states whose economies historically depended on coal, timber, and tobacco. Persistently lower median income; cheap land and housing but limited employment.",
+      "states": ["WV", "KY", "TN", "VA", "NC", "GA", "AL", "OH", "PA", "MD", "NY", "MS", "SC"]
+    },
+    "tech_corridors": {
+      "label": "Tech corridors",
+      "color": "#2563eb",
+      "description": "States with major tech-industry concentrations: Silicon Valley + LA (CA), Seattle (WA), Boston-128 (MA), Austin (TX), Research Triangle (NC), Denver-Boulder (CO), Northern Virginia (VA), NYC fintech/adtech (NY). Wage premiums + housing supply constraints drive top-quartile rents.",
+      "states": ["CA", "WA", "MA", "TX", "NC", "CO", "VA", "NY", "UT", "OR"]
+    },
+    "great_plains": {
+      "label": "Great Plains",
+      "color": "#ca8a04",
+      "description": "Wheat-belt and ranching states with sparse population, wind-energy boom, and agriculture-dominant economies. Cheap rents, slow population growth.",
+      "states": ["ND", "SD", "NE", "KS", "MT", "WY", "OK", "MN", "IA", "MO", "TX"]
+    },
+    "oil_patch": {
+      "label": "Oil Patch",
+      "color": "#1f2937",
+      "description": "States with major oil + gas production: Permian Basin (TX, NM), Bakken (ND), Anadarko (OK), Wyoming, Alaska's North Slope, Louisiana Gulf, Kansas. Rents in extraction-county boomtowns spike when oil prices rise (Williston ND, Midland TX) but the state-average effect is modest.",
+      "states": ["TX", "OK", "ND", "AK", "NM", "WY", "LA", "KS", "CO"]
+    },
+    "black_belt": {
+      "label": "Black Belt",
+      "color": "#b91c1c",
+      "description": "Crescent of rural Deep-South counties named for the historically dark fertile cotton soil; high African-American population share, persistent poverty, slow-growth agricultural and small-manufacturing economies. Cheap rents but limited opportunity.",
+      "states": ["AL", "MS", "LA", "GA", "SC", "NC"]
+    },
+    "new_england": {
+      "label": "New England",
+      "color": "#0e7490",
+      "description": "Six original colonial states. Mature service economies (higher ed, finance, healthcare, biotech), aging demographics, restrictive zoning + old housing stock. Rents middle-to-high.",
+      "states": ["ME", "VT", "NH", "MA", "CT", "RI"]
+    }
+  }
+}

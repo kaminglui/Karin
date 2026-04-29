@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          # CPU-only torch is fine for tests — whisper STT is exercised
+          # via mocks; none of the CI suite actually runs the model.
+          pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -r bridge/requirements.txt
+          pip install pytest pytest-asyncio ruff
+          python -m spacy download en_core_web_sm
+
+      - name: Ruff (lint)
+        run: ruff check bridge/ web/ scripts/
+        continue-on-error: true
+
+      - name: Pytest
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          KARIN_STT_ENABLED: "false"
+          KARIN_TTS_ENABLED: "false"
+        run: pytest -q bridge/ web/

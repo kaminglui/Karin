@@ -1,0 +1,81 @@
+{
+  "_metadata": {
+    "version": 1,
+    "data_as_of": "2026-04-27",
+    "metric": "median_2br_rent_monthly_usd",
+    "source": "Population-weighted approximation of HUD Fair Market Rent + Zillow ZORI per-state aggregates (US 50 states + DC). Baked in for v1 — fetcher (scripts/fetch_hud_state_fmr.py) deferred until the full ALICE data-fetcher set lands.",
+    "notes": "Values are nominal monthly rent in USD for a 2-bedroom apartment. Per-county HUD FMRs vary widely within each state — these are population-weighted state aggregates, useful for choropleth fill colors but not for individual-renter decisions. Refresh annually when HUD publishes the new FMR cycle (October)."
+  },
+  "fips_to_code": {
+    "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA",
+    "08": "CO", "09": "CT", "10": "DE", "11": "DC", "12": "FL",
+    "13": "GA", "15": "HI", "16": "ID", "17": "IL", "18": "IN",
+    "19": "IA", "20": "KS", "21": "KY", "22": "LA", "23": "ME",
+    "24": "MD", "25": "MA", "26": "MI", "27": "MN", "28": "MS",
+    "29": "MO", "30": "MT", "31": "NE", "32": "NV", "33": "NH",
+    "34": "NJ", "35": "NM", "36": "NY", "37": "NC", "38": "ND",
+    "39": "OH", "40": "OK", "41": "OR", "42": "PA", "44": "RI",
+    "45": "SC", "46": "SD", "47": "TN", "48": "TX", "49": "UT",
+    "50": "VT", "51": "VA", "53": "WA", "54": "WV", "55": "WI",
+    "56": "WY"
+  },
+  "state_names": {
+    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
+    "CA": "California", "CO": "Colorado", "CT": "Connecticut",
+    "DE": "Delaware", "DC": "District of Columbia", "FL": "Florida",
+    "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois",
+    "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky",
+    "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
+    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota",
+    "MS": "Mississippi", "MO": "Missouri", "MT": "Montana",
+    "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire",
+    "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York",
+    "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio",
+    "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
+    "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota",
+    "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
+    "VA": "Virginia", "WA": "Washington", "WV": "West Virginia",
+    "WI": "Wisconsin", "WY": "Wyoming"
+  },
+  "by_year": {
+    "2020": {
+      "AL": 821, "AK": 1131, "AZ": 1233, "AR": 752, "CA": 1747,
+      "CO": 1336, "CT": 1309, "DE": 1163, "DC": 1765, "FL": 1374,
+      "GA": 1118, "HI": 1973, "ID": 1014, "IL": 1113, "IN": 868,
+      "IA": 809, "KS": 836, "KY": 816, "LA": 843, "ME": 1119,
+      "MD": 1393, "MA": 1595, "MI": 948, "MN": 1100, "MS": 744,
+      "MO": 845, "MT": 921, "NE": 843, "NV": 1250, "NH": 1236,
+      "NJ": 1518, "NM": 927, "NY": 1518, "NC": 1015, "ND": 855,
+      "OH": 848, "OK": 776, "OR": 1233, "PA": 1000, "RI": 1264,
+      "SC": 977, "SD": 848, "TN": 949, "TX": 1131, "UT": 1148,
+      "VT": 1172, "VA": 1189, "WA": 1436, "WV": 659, "WI": 873,
+      "WY": 847
+    },
+    "2022": {
+      "AL": 921, "AK": 1269, "AZ": 1383, "AR": 844, "CA": 1960,
+      "CO": 1499, "CT": 1469, "DE": 1305, "DC": 1980, "FL": 1542,
+      "GA": 1255, "HI": 2215, "ID": 1138, "IL": 1249, "IN": 974,
+      "IA": 908, "KS": 938, "KY": 916, "LA": 946, "ME": 1256,
+      "MD": 1563, "MA": 1790, "MI": 1064, "MN": 1235, "MS": 835,
+      "MO": 949, "MT": 1033, "NE": 946, "NV": 1403, "NH": 1388,
+      "NJ": 1704, "NM": 1041, "NY": 1704, "NC": 1140, "ND": 960,
+      "OH": 952, "OK": 871, "OR": 1383, "PA": 1123, "RI": 1419,
+      "SC": 1097, "SD": 952, "TN": 1065, "TX": 1270, "UT": 1288,
+      "VT": 1316, "VA": 1335, "WA": 1612, "WV": 740, "WI": 980,
+      "WY": 951
+    },
+    "2024": {
+      "AL": 1024, "AK": 1410, "AZ": 1538, "AR": 938, "CA": 2178,
+      "CO": 1665, "CT": 1632, "DE": 1450, "DC": 2200, "FL": 1714,
+      "GA": 1394, "HI": 2462, "ID": 1265, "IL": 1388, "IN": 1083,
+      "IA": 1009, "KS": 1042, "KY": 1018, "LA": 1051, "ME": 1396,
+      "MD": 1737, "MA": 1989, "MI": 1182, "MN": 1372, "MS": 928,
+      "MO": 1054, "MT": 1148, "NE": 1051, "NV": 1559, "NH": 1542,
+      "NJ": 1893, "NM": 1156, "NY": 1893, "NC": 1267, "ND": 1067,
+      "OH": 1058, "OK": 968, "OR": 1538, "PA": 1248, "RI": 1576,
+      "SC": 1219, "SD": 1058, "TN": 1183, "TX": 1411, "UT": 1431,
+      "VT": 1462, "VA": 1483, "WA": 1791, "WV": 822, "WI": 1089,
+      "WY": 1057
+    }
+  }
+}

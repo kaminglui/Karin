@@ -1,0 +1,64 @@
+{#-
+  V2 — fallback with TERSE tool injection for Karin's iter-3 LoRA.
+
+  Only use if V1 (no injection) fails the Phase B isolation test. Injects
+  each tool as a single line "name(param1, param2): description" instead
+  of dumping full OpenAI JSON schemas. Target budget ~500 tokens for 16
+  tools — fits ctx=4096 alongside 2100-tok system prompt + history.
+
+  Rendering identical to V1 for system / assistant / tool turns.
+-#}
+{%- if messages -%}
+{%- set has_system = (messages[0].role == 'system') -%}
+{%- if has_system or tools -%}
+<|start_header_id|>system<|end_header_id|>
+{%- if has_system %}
+
+{{ messages[0].content }}
+{%- endif %}
+{%- if tools %}
+
+You are a helpful assistant with tool calling capabilities. When you receive a tool call response, use the output to format an answer to the orginal use question.
+
+Available tools:
+{% for t in tools -%}
+{%- set fn = t.function if t.function is defined else t -%}
+- {{ fn.name }}({% if fn.parameters and fn.parameters.properties %}{{ fn.parameters.properties.keys() | join(', ') }}{% endif %}): {{ fn.description | default('', true) }}
+{% endfor -%}
+{%- endif %}<|eot_id|>
+{%- endif -%}
+{%- set dialog = messages[1:] if has_system else messages -%}
+{%- for message in dialog -%}
+{%- if message.role == 'user' -%}
+<|start_header_id|>user<|end_header_id|>
+
+{{ message.content }}<|eot_id|>{% if loop.last %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}
+{%- elif message.role == 'assistant' -%}
+<|start_header_id|>assistant<|end_header_id|>
+{%- if message.tool_calls %}
+
+{% for tc in message.tool_calls -%}
+{"name": "{{ tc.function.name }}", "parameters": {{ tc.function.arguments | tojson if tc.function.arguments is mapping else tc.function.arguments }}}
+{%- endfor %}
+{%- else %}
+
+{{ message.content }}{% if not loop.last %}<|eot_id|>{% endif %}
+{%- endif -%}
+{%- elif message.role == 'tool' -%}
+<|start_header_id|>ipython<|end_header_id|>
+
+{{ message.content }}<|eot_id|>{% if loop.last %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- else -%}
+{%- if system %}<|start_header_id|>system<|end_header_id|>
+
+{{ system }}<|eot_id|>{% endif %}{% if prompt %}<|start_header_id|>user<|end_header_id|>
+
+{{ prompt }}<|eot_id|>{% endif %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}

@@ -1,0 +1,146 @@
+# Feature registry — the single declarative source of truth for
+# subsystem and tool on/off state. Read by bridge/features.py at
+# startup; env vars (second column) override YAML when set, so deploy
+# rollouts can flip flags without editing this file.
+#
+# To add a new toggle:
+#   1. Add a line under `subsystems:` or `tools:` below
+#   2. Have the consuming module call `features.is_enabled(name)` or
+#      `features.tool_enabled(name)`
+#   3. Document it in RUNBOOK § Feature flags
+#
+# NOTE: when env override is set to anything in ("0","false","off","no",""),
+# the subsystem is DISABLED regardless of the yaml default.
+
+subsystems:
+  # Speech-to-text (faster-whisper). Off in the reasoning-focused
+  # phase to reclaim ~1 GB for the LLM.
+  stt:
+    enabled: false
+    env: KARIN_STT_ENABLED
+
+  # Text-to-speech (GPT-SoVITS sovits container). Off to reclaim
+  # ~2.3 GB. Must be paired with `docker compose start sovits` when
+  # flipped back on.
+  tts:
+    enabled: false
+    env: KARIN_TTS_ENABLED
+
+  # Preference retrieval bandit (nomic-embed-text kNN over feedback).
+  # Off because the extra embed model competes with LLM VRAM on Orin
+  # Nano — the gains weren't worth the pressure on our hardware.
+  bandit:
+    enabled: false
+    env: KARIN_BANDIT
+
+  # US/CN holiday banner + Karin-voiced greeting. Greeting synth
+  # silently degrades when TTS is off (button hides).
+  holidays:
+    enabled: true
+
+  # AP/Reuters-style wire feeds in the news subsystem. Gated so the
+  # news module falls back to RSS alone when the wire pipeline isn't
+  # configured with credentials.
+  news_wires:
+    enabled: false
+
+  # LLM-assisted semantic-duplicate merge for borderline news clusters.
+  # When on, after lexical clustering settles, the news subsystem asks
+  # the LLM to second-opinion any pairs whose title Jaccard falls in
+  # the borderline band (0.30–0.55). Only allows MERGES; can't split
+  # clusters. Adds ≤5 LLM calls per ingest cycle. Turn off if the
+  # LLM is overloaded or you don't trust it for this classification.
+  news_cross_verify:
+    enabled: true
+
+  # LLM-backed translation for news briefs (Phase C). When on, briefs
+  # are rendered in the user's target_language from preferences.json,
+  # using the same Ollama model as chat. Translations are cached on
+  # disk, so the cost is one LLM call per (headline, target) pair ever.
+  # Off by default — flip to true after you've set target_language
+  # in data/news/preferences.json and want briefs translated.
+  news_translate:
+    enabled: false
+    env: KARIN_NEWS_TRANSLATE
+
+  # LLM-assisted watchlist keyword learning (Phase E). After each
+  # ingest, pick the top N watchlist buckets by cluster count and ask
+  # Qwen to name the recurring entities in that bucket's recent
+  # stories. Results stored in data/news/learned_keywords.json with a
+  # 30-day TTL. Off by default — flip on after you have a few days of
+  # news flowing and watchlists configured, otherwise the LLM is
+  # staring at too-thin data.
+  news_keyword_learn:
+    enabled: false
+    env: KARIN_NEWS_KEYWORD_LEARN
+
+  # LLM-assisted threat verifier (Phase G.b). When on, news signals
+  # whose rule-based threat score lands in the borderline band
+  # (2-3) get re-scored by Qwen-via-Ollama using the cluster text
+  # + user location. The LLM can only move the score ±1 tier and
+  # must cite supporting text, so hallucinations can't invent a
+  # threat or dismiss a clear one. Decisions cache for 7 days.
+  # Off by default — the rule-based scorer alone is conservative
+  # and reasonable; flip this on once you've got real news flowing
+  # and want the extra judgment layer.
+  alerts_threat_llm:
+    enabled: false
+    env: KARIN_ALERTS_THREAT_LLM
+
+  # Per-reply thumbs up/down buttons. Feeds the bandit (when enabled)
+  # and leaves audit rows in data/feedback/. Off by default because
+  # the UI clutter isn't worth it without the bandit consuming the
+  # signal — stored rows are preserved for future analysis. Flip to
+  # true to re-expose the thumbs row beneath each assistant reply.
+  feedback_thumbs:
+    enabled: false
+    env: KARIN_FEEDBACK_THUMBS
+
+  # US State Department travel-advisory RSS → alerts. Off by default
+  # because the per-country advisory levels change too rarely and are
+  # too broad to be useful as an actionable alert stream. Turn on via
+  # env or yaml if you travel internationally and want level-change
+  # notifications. NWS weather alerts are unaffected — they live on
+  # their own code path.
+  alerts_travel_advisory:
+    enabled: false
+    env: KARIN_ALERTS_TRAVEL_ADVISORY
+
+  # Outbound push notifications (Discord webhook + ntfy.sh). Off by
+  # default until you configure at least one channel via env vars
+  # (KARIN_NOTIFY_DISCORD_WEBHOOK or KARIN_NOTIFY_NTFY_TOPIC) and
+  # flip this flag. See config/notify.example.yaml for routing rules
+  # (which alerts / tracker moves get pushed, cooldown windows).
+  notifications:
+    enabled: false
+    env: KARIN_NOTIFICATIONS
+
+  # Calendar .ics polling — fetches the user's calendar(s) from
+  # their secret .ics URL(s) and pushes "Meeting in N min"
+  # notifications when an event crosses its lead-time window. Read-
+  # only; no OAuth / write-back. Off by default until at least one
+  # KARIN_CALENDAR_<NAME>_URL env var is set AND the label is
+  # listed in config/calendar.yaml.
+  calendar:
+    enabled: false
+    env: KARIN_CALENDAR
+
+  # Expose the `schedule_reminder` tool to the LLM as a fallback for
+  # reminder phrasings the regex detector in bridge/reminders/detect.py
+  # can't catch (e.g. "remember I have a thing Wednesday morning").
+  # Off by default because it adds ~100 tokens to every system
+  # prompt. Enable when you want the model to catch the weirder
+  # reminder shapes alongside the always-on regex path.
+  reminders_llm_tool:
+    enabled: false
+    env: KARIN_REMINDERS_LLM_TOOL
+
+tools:
+  # Default policy — tools not listed are ENABLED. Use the `disabled`
+  # list below to kill-switch specific tools without code edits. This
+  # is read at startup and filters `TOOL_SCHEMAS` before it reaches the
+  # LLM, so the model never sees disabled tools as options.
+  disabled: []
+  # Example: silencing the creative/roleplay router for a turn-focused
+  # deployment:
+  #   disabled: [tell_story, wiki_random]

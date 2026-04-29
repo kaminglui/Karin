@@ -1,0 +1,22 @@
+[
+  {"source_id": "bbc",       "url": "http://feeds.bbci.co.uk/news/world/rss.xml"},
+  {"source_id": "bbc_us",    "url": "http://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml"},
+  {"source_id": "bbc_asia",  "url": "http://feeds.bbci.co.uk/news/world/asia/rss.xml"},
+  {"source_id": "npr",       "url": "https://feeds.npr.org/1004/rss.xml"},
+  {"source_id": "guardian",  "url": "https://www.theguardian.com/world/rss"},
+  {"source_id": "nyt",       "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"},
+  {"source_id": "nyt_us",    "url": "https://rss.nytimes.com/services/xml/rss/nyt/US.xml"},
+  {"source_id": "aljazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml"},
+  {"source_id": "dw",        "url": "https://rss.dw.com/rdf/rss-en-world"},
+  {"source_id": "nhk",       "url": "https://www3.nhk.or.jp/nhkworld/en/news/list.xml"},
+  {"source_id": "japantimes","url": "https://www.japantimes.co.jp/feed/"},
+  {"source_id": "scmp",      "url": "https://www.scmp.com/rss/91/feed"},
+  {"source_id": "cna",       "url": "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6511"},
+  {"source_id": "yonhap",    "url": "https://en.yna.co.kr/RSS/news.xml"},
+  {"source_id": "taipeitimes","url": "https://www.taipeitimes.com/xml/index.rss"},
+  {"source_id": "scmp_hk",   "url": "https://www.scmp.com/rss/36/feed"},
+  {"source_id": "scmp_china", "url": "https://www.scmp.com/rss/4/feed"},
+  {"source_id": "globaltimes","url": "https://www.globaltimes.cn/rss/outbrain.xml"},
+  {"source_id": "caixin",    "url": "https://www.caixinglobal.com/rss/feed.xml"},
+  {"source_id": "hkfp",      "url": "https://hongkongfp.com/feed/"}
+]

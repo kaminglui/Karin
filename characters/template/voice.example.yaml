@@ -1,0 +1,35 @@
+# Template for characters/<name>/voice.yaml.
+#
+# Copy this file into each character directory and fill in the fields
+# for the voice you actually cloned. voice.yaml is gitignored so your
+# personal persona text + voice metadata stay out of commits.
+#
+# Required fields:
+#   prompt_lang     language of your ref.wav (BCP-47 short code: ja, ko, en, zh, ...)
+#   text_lang       language the TTS will SPEAK (almost always "en" for this app)
+#   description     short one-liner shown in the Settings panel voice switcher
+#
+# Optional fields:
+#   language_note   fills {language_note} in characters/profile.yaml
+#   persona         fills {persona} in characters/profile.yaml
+#
+# Both placeholders default to a generic, neutral assistant voice when
+# omitted (see bridge/utils.py::_fill_voice_persona for the defaults).
+
+prompt_lang: en             # replace with whatever language your ref.wav is
+text_lang: en               # what the TTS will output — English for this app
+description: My custom voice
+
+# --- optional persona override -------------------------------------------
+# If you don't want a character persona, delete these two fields and the
+# character will use the built-in neutral defaults.
+
+language_note: >-
+  Replies are ALWAYS in English. If the user writes in another
+  language, understand it but answer in English. If a tool returns
+  content in another language, translate or summarize it in English.
+
+persona: >-
+  You are a helpful, friendly voice assistant. Concise, neutral in
+  tone, no strong personality quirks. Your value is reliability and
+  clarity.

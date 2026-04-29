@@ -1,0 +1,35 @@
+# Calendar integration — copy to `calendar.yaml` to activate. Without
+# this file the calendar poller is a no-op (reads 0 feeds, fires
+# nothing). Same env-var-for-secrets discipline as notify.yaml —
+# actual .ics URLs never land in YAML or git, only in .env or
+# Settings-panel storage.
+#
+# Each URL is a secret (long, unguessable token in the path). Treat
+# like a webhook URL — anyone with it can read your calendar.
+#
+# Where to find the .ics URL on common providers:
+#
+#   Google Calendar  → calendar.google.com → calendar settings →
+#                      "Secret address in iCal format"
+#   Apple iCloud     → icloud.com/calendar → share icon on the
+#                      calendar → "Public Calendar" → copy URL
+#                      (replace webcal:// with https:// on paste)
+#   Outlook.com      → outlook.live.com/calendar → Publish calendar
+#                      → copy ICS link
+#   Nextcloud        → calendar app → share calendar → "Public URL"
+#   Fastmail         → per-calendar settings → "Public calendar URL"
+
+# Default lead time for notifications. Each event fires when it's
+# within this many minutes of starting. Per-calendar overrides below.
+lead_time_minutes: 15
+
+calendars:
+  # Add one block per calendar. `url_env` names the environment
+  # variable holding the .ics URL — set it in .env or via
+  # `docker compose run -e ...`. Missing env → calendar silently
+  # skipped (logged at INFO).
+  - label: "work"
+    url_env: "KARIN_CALENDAR_WORK_URL"
+    # lead_time_minutes: 30   # override per-calendar if you want
+  - label: "personal"
+    url_env: "KARIN_CALENDAR_PERSONAL_URL"

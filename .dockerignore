@@ -1,0 +1,88 @@
+# Things that must not land in Docker images.
+
+# venvs — built inside the image from requirements.txt
+.venv/
+.venv-*/
+venv/
+
+# Upstream GPT-SoVITS clone + pretrained_models — bind-mounted instead
+# of baked in (~4 GB of weights).
+third_party/
+# ...except the requirements file: small, and baking it into the image
+# means pip install runs at build time (cacheable layer) instead of
+# on every container first-start.
+!third_party/GPT-SoVITS/requirements.txt
+
+# Trained voice weights — bind-mounted, not baked.
+voice_training/export/*.ckpt
+voice_training/export/*.pth
+voice_training/export/*.wav
+
+# Runtime state — bind-mounted so the container writes through to host.
+data/
+bridge/news/data/
+bridge/trackers/data/
+bridge/alerts/data/
+
+# Runtime captures can contain local paths, hostnames, and tailnet IPs.
+*.log
+logs/
+deploy_history.txt
+*_history.txt
+
+# Personal config files (ship the examples, not the real ones).
+.env
+deploy/.env
+config/api_keys.json
+config/tuning.yaml
+config/calendar.yaml
+config/notify.yaml
+bridge/news/config/preferences.json
+bridge/trackers/config/trackers.json
+bridge/trackers/config/tracker_preferences.json
+
+# Private character files and voice models. Keep the neutral fallback
+# persona in context so future Dockerfiles can still copy it safely.
+config/characters/_*.yaml
+characters/_*/
+characters/*/voice.yaml
+!characters/default/voice.yaml
+characters/*/voices/*.ckpt
+characters/*/voices/*.pth
+characters/*/voices/*.wav
+
+# Local SFT/training artifacts.
+sft/runs/
+sft/sft_dataset.tar
+sft/sft_dataset.tar.*
+sft/sft_dataset.arrow/
+sft/sft_dataset.arrow.*/
+sft/dataset.arrow/
+stuff/
+/run_*/
+/colab_sft_*/
+RUNBOOK.dev.md
+
+# Local notes / tooling
+tmp/
+helper/
+_backup/
+.vscode/
+.idea/
+.claude/
+
+# Dev artifacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore

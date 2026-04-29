@@ -1,0 +1,116 @@
+# GPT-SoVITS api_v2.py container.
+#
+# GPT-SoVITS is a separate process because it loads its own large
+# models (Text2Semantic + VITS + BERT + HuBERT, ~4 GB total) and because
+# its dependency graph fights the rest of the stack — pinning here so
+# the bridge venv doesn't accidentally pull an incompatible torchaudio.
+#
+# Base images — pick via BASE_IMAGE build arg:
+#   x86 CUDA:       nvidia/cuda:12.4.1-runtime-ubuntu22.04
+#   Jetson (L4T):   dustynv/l4t-pytorch:r36.2.0   (has JetPack torch pre-installed)
+#   CPU (slow):     python:3.12-slim
+#
+# The container mounts:
+#   /gpt-sovits                 source clone (host: third_party/GPT-SoVITS)
+#   /gpt-sovits/GPT_SoVITS/pretrained_models
+#                               ~4 GB of upstream weights (must be on host)
+#   /voice                      user's trained voice (ref.wav + *.ckpt + *.pth)
+
+ARG BASE_IMAGE=nvidia/cuda:12.4.1-runtime-ubuntu22.04
+FROM ${BASE_IMAGE}
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONUTF8=1 \
+    PYTHONIOENCODING=utf-8 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_INDEX_URL=https://pypi.org/simple \
+    PIP_TRUSTED_HOST="pypi.org pypi.python.org files.pythonhosted.org"
+
+# Remove the dustynv base image's preconfigured pip.conf — it points
+# at a local Jetson mirror that doesn't resolve from inside the build
+# container, which causes every pip install to waste ~30s retrying
+# before falling back. Our ENV above provides the PyPI-only config.
+RUN rm -f /etc/pip.conf /root/.pip/pip.conf 2>/dev/null || true
+
+# Install Python 3.12 + ffmpeg + build tools.
+# (The nvidia/cuda base image ships no Python.)
+RUN if ! command -v python3 >/dev/null 2>&1; then \
+        apt-get update && apt-get install -y --no-install-recommends \
+            software-properties-common && \
+        add-apt-repository -y ppa:deadsnakes/ppa && \
+        apt-get update && apt-get install -y --no-install-recommends \
+            python3.12 python3.12-venv python3.12-dev python3-pip \
+            ffmpeg libsndfile1 git curl build-essential \
+            && rm -rf /var/lib/apt/lists/* && \
+        ln -sf /usr/bin/python3.12 /usr/local/bin/python && \
+        ln -sf /usr/bin/python3.12 /usr/local/bin/python3; \
+    else \
+        apt-get update && apt-get install -y --no-install-recommends \
+            ffmpeg libsndfile1 git curl \
+            && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+WORKDIR /gpt-sovits
+
+# Install torch only if missing (already present on the dustynv/l4t base).
+# GPT-SoVITS v2Pro needs torch 2.x + torchaudio matching; the api_v2 code
+# was pinned against 2.6 on x86 (see docs/pc-setup.md).
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
+RUN python -c "import torch, torchaudio, torchvision" 2>/dev/null || \
+    pip install torch torchaudio torchvision --index-url "${TORCH_INDEX_URL}"
+
+# Pin huggingface_hub<1.0 for GPT-SoVITS tokenizers compatibility
+# (known issue, see docs/pc-setup.md).
+RUN pip install "huggingface_hub<1.0"
+
+# Bake GPT-SoVITS upstream requirements into the image at build time so
+# container starts are fast (no 10-minute pip install on first run).
+# .dockerignore whitelists this single file out of third_party/.
+#
+# Filtering:
+#   - torch* → already in the JetPack-supplied base image
+#   - opencc (C++ wrapper) → no aarch64 wheel on PyPI and its source
+#     build needs libopencc-dev + a matching CMake toolchain, which
+#     bloats the image. We substitute the pure-Python
+#     `opencc-python-reimplemented` below; it exposes the same
+#     `import opencc` surface GPT-SoVITS's Chinese text normalizer
+#     uses. English-only deployments don't exercise that path anyway.
+COPY third_party/GPT-SoVITS/requirements.txt /tmp/gpt-sovits-reqs.txt
+RUN grep -vE '^(torch|torchaudio|torchvision|opencc|transformers|peft|torchmetrics)(==|>=|\b)' /tmp/gpt-sovits-reqs.txt \
+        > /tmp/gpt-sovits-reqs.clean.txt && \
+    pip install -r /tmp/gpt-sovits-reqs.clean.txt && \
+    pip install opencc-python-reimplemented && \
+    pip install \
+        "transformers==4.40.2" \
+        "peft==0.11.1" \
+        "torchmetrics==1.4.0"
+# The dustynv/l4t-pytorch:r36.2.0 base ships torch 2.2, which lacks
+# `register_pytree_node(flatten_with_keys_fn=...)` (added in torch 2.3).
+# That cascades through the ML-tooling stack, so we pin a mutually
+# compatible trio known to work on torch 2.2:
+#   transformers==4.40.2  — last release without flatten_with_keys_fn
+#                           (4.41 introduced it for ParameterizedPytree)
+#   peft==0.11.1         — last release that doesn't import
+#                           EncoderDecoderCache (added in transformers
+#                           4.42)
+#   torchmetrics==1.4.0  — compatible with transformers 4.40
+# These override the broader upstream pins (transformers>=4.43,<=4.50;
+# peft<0.18.0) for this image only. Lift when we get torch ≥2.3.
+
+# Entrypoint: on first run, install the upstream GPT-SoVITS requirements
+# from the bind-mounted clone (deps change upstream; baking them would
+# require rebuilding on every update), download NLTK corpora if missing,
+# then launch api_v2.py. Idempotent — a marker file skips reinstall on
+# subsequent starts.
+COPY deploy/sovits-entrypoint.sh /usr/local/bin/sovits-entrypoint.sh
+RUN chmod +x /usr/local/bin/sovits-entrypoint.sh
+
+EXPOSE 9880
+
+# Healthcheck: api_v2 exposes /control?command=ping which returns 'null'.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:9880/control?command=ping" >/dev/null || exit 1
+
+ENTRYPOINT ["/usr/local/bin/sovits-entrypoint.sh"]

@@ -1,0 +1,52 @@
+# Bridge runtime dependencies — pinned for reproducibility.
+#
+# IMPORTANT: torch is intentionally NOT pinned here. Install it first,
+# from whichever source matches your hardware:
+#   - Jetson / JetPack:  NVIDIA's supplied wheels (see setup.sh)
+#   - x86 with CUDA:     pip install torch --index-url https://download.pytorch.org/whl/cu124
+#   - CPU only:          pip install torch
+# `pip install torch` via PyPI on ARM64/JetPack pulls a CPU wheel and
+# silently breaks CUDA — the Dockerfile + setup.sh handle this.
+
+# --- STT + audio I/O --------------------------------------------------------
+faster-whisper==1.2.1
+ctranslate2==4.7.1       # faster-whisper backend; pinned together
+silero-vad==6.2.1
+sounddevice==0.5.5
+soundfile==0.13.1
+
+# --- general utilities ------------------------------------------------------
+numpy==1.26.4            # < 2.0 for torch + sympy compat
+httpx==0.28.1
+PyYAML==6.0.3
+feedparser==6.0.12       # RSS parsing for bridge/news
+trafilatura==2.0.0       # Full-article extraction for bridge/news/extract.py
+
+# --- web server (web/ stack: FastAPI + Uvicorn) -----------------------------
+fastapi==0.135.3
+uvicorn==0.44.0
+starlette==1.0.0
+pydantic==2.12.5
+python-multipart==0.0.20   # required by FastAPI for UploadFile / Form (audio upload)
+
+# --- math + conversion tools -----------------------------------------------
+sympy==1.13.1            # math + circuit synthesis
+pint==0.24.4             # convert tool (units); 0.25+ needs Python 3.11+ (Jetson's dustynv image has 3.10)
+
+# --- web search -------------------------------------------------------------
+ddgs==9.13.0             # DuckDuckGo search; fragile but free
+primp==1.2.2             # ddgs HTTP backend
+lxml==6.0.4              # ddgs HTML parser
+
+# --- embedding fallback for routing classifier -----------------------------
+# fastembed ships MiniLM-L6-v2 as ONNX, runs on CPU via the
+# already-present onnxruntime. Used in bridge/routing/embed_classifier.py
+# to catch paraphrased prompts the regex classifier misses.
+fastembed==0.8.0
+
+# --- NER for the news relation graph ---------------------------------------
+# Used by bridge.news.noun_extract to pull named entities from cluster
+# headlines. en_core_web_sm is installed separately in the Dockerfile
+# (via `python -m spacy download en_core_web_sm`) — pip can't fetch
+# the model wheel automatically once spaCy is pinned.
+spacy==3.8.5

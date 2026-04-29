@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Map · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/vendor/d3.min.js"></script>
+  <script src="/static/vendor/topojson-client.min.js"></script>
+  <style>
+    /* Map-specific styles. The rest piggybacks off panels.css for
+     * controls + headings + comparison cells. */
+    .map-svg {
+      display: block;
+      width: 100%;
+      height: 56vh;
+      min-height: 380px;
+      background: rgba(var(--tint-rgb), 0.04);
+      border: 1px solid rgba(var(--tint-rgb), 0.16);
+      border-radius: 10px;
+    }
+    .map-state {
+      stroke: var(--card-bg);
+      stroke-width: 0.6;
+      stroke-linejoin: round;
+      cursor: pointer;
+      transition: stroke-width 100ms ease, stroke 100ms ease;
+      /* Keep stroke width constant when the parent <g> is scaled by
+       * the zoom transform — without this the borders get cartoonishly
+       * thick at 8x zoom. The drop-shadow filter on .in-region is
+       * unaffected (it's based on the rendered output). */
+      vector-effect: non-scaling-stroke;
+    }
+    .map-state:hover {
+      stroke: rgb(var(--tint-rgb));
+      stroke-width: 1.5;
+    }
+    .map-state.is-selected {
+      stroke: rgb(var(--tint-rgb));
+      stroke-width: 2;
+    }
+    .map-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: var(--card-bg);
+      border: 1px solid rgba(var(--tint-rgb), 0.35);
+      border-radius: 8px;
+      padding: 0.4rem 0.65rem;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+      opacity: 0;
+      transition: opacity 0.12s ease;
+      z-index: 50;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .map-tooltip.visible { opacity: 1; }
+    .map-tooltip-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .map-tooltip-value {
+      color: rgb(var(--tint-rgb));
+      font-weight: 600;
+      margin-left: 0.4rem;
+    }
+    /* Zoom controls — top-right corner of the SVG container.
+     * Stack vertically on desktop, sized for finger-tap on mobile. */
+    .map-zoom-controls {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      z-index: 5;
+    }
+    .map-zoom-btn {
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid rgba(var(--tint-rgb), 0.3);
+      background: var(--card-bg);
+      color: var(--text);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 1.1rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 100ms ease, border-color 100ms ease,
+                  transform 100ms ease;
+    }
+    .map-zoom-btn:hover {
+      background: rgba(var(--tint-rgb), 0.08);
+      border-color: rgba(var(--tint-rgb), 0.55);
+    }
+    .map-zoom-btn:active {
+      transform: translateY(1px);
+    }
+    /* Color-bar legend below the map. */
+    .map-legend {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .map-legend-bar {
+      flex: 1;
+      height: 10px;
+      border-radius: 999px;
+    }
+    .map-legend-tick {
+      font-variant-numeric: tabular-nums;
+    }
+    .map-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+      gap: 0.5rem;
+      margin: 0.8rem 0;
+    }
+    .map-stat-cell {
+      background: var(--card-bg);
+      border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+      border-radius: 8px;
+      padding: 0.5rem 0.65rem;
+    }
+    .map-stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+    .map-stat-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+    /* Region overlay — when a region is selected, member states
+     * get a thick saturated stroke and a slight outer-glow shadow.
+     * Non-members fade hard so the highlighted region pops. */
+    .map-state.in-region {
+      stroke-width: 5;
+      stroke-opacity: 1;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 3px currentColor);
+      cursor: pointer;
+    }
+    /* Bring the highlighted region's stroke to the very front of the
+     * SVG paint order — without this, neighboring non-member states
+     * can render over the bottom of the thick stroke. */
+    .map-state.in-region {
+      paint-order: stroke fill;
+    }
+    .map-state.out-region {
+      opacity: 0.2;
+    }
+    .map-state.out-region:hover {
+      opacity: 0.45;
+    }
+    /* Region info card right above the SVG when an overlay is on,
+     * showing the region label + description + the legend color. */
+    .map-region-info {
+      margin: 0.5rem 0 0.6rem;
+      padding: 0.65rem 0.85rem;
+      background: var(--card-bg);
+      border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+      border-left-width: 4px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+    .map-region-info-label {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+    .map-region-info-desc {
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    /* State drill profile card — shown when the user clicks a state. */
+    .map-state-profile {
+      margin-top: 1.1rem;
+      padding: 1rem 1.1rem;
+      background: var(--card-bg);
+      border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+      border-radius: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem 1.5rem;
+    }
+    .map-state-profile h2 {
+      grid-column: 1 / -1;
+      margin: 0;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .map-state-profile h2 .map-profile-rent {
+      font-size: 0.85rem;
+      color: rgb(var(--tint-rgb));
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .map-state-profile-section {
+      min-width: 0;
+    }
+    .map-state-profile-section h3 {
+      margin: 0 0 0.4rem;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+    .map-state-profile-section ul {
+      list-style: disc;
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+    .map-state-profile-section li {
+      font-size: 0.88rem;
+      line-height: 1.45;
+      margin-bottom: 0.15rem;
+    }
+    .map-state-profile-narrative {
+      grid-column: 1 / -1;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      padding: 0.6rem 0.8rem;
+      background: rgba(var(--tint-rgb), 0.05);
+      border-left: 3px solid rgba(var(--tint-rgb), 0.4);
+      border-radius: 0 8px 8px 0;
+    }
+    .map-state-profile-regions {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .map-region-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      color: var(--chip-text);
+      font-size: 0.78rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+    }
+    .map-region-chip-dot {
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    /* Clickable chip — shows it's interactive + flips to "active"
+     * styling when the matching region overlay is on. */
+    .map-region-chip-clickable {
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 90ms ease, border-color 90ms ease,
+                  transform 90ms ease;
+    }
+    .map-region-chip-clickable:hover {
+      background: rgba(var(--tint-rgb), 0.1);
+      border-color: rgba(var(--tint-rgb), 0.4);
+    }
+    .map-region-chip-clickable:active {
+      transform: translateY(1px);
+    }
+    .map-region-chip-clickable.is-active {
+      background: rgba(var(--tint-rgb), 0.18);
+      border-color: rgb(var(--tint-rgb));
+      color: var(--text);
+      font-weight: 700;
+    }
+    .map-region-chip-clickable.is-active::after {
+      content: " · click to clear";
+      font-size: 0.7em;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    @media (max-width: 600px) {
+      .map-state-profile {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>Map</h1>
+      <span id="subtitle" class="subtitle"></span>
+    </header>
+
+    <div class="alice-controls" role="group" aria-label="Map inputs">
+      <label class="alice-control" for="map-year-select">
+        <span>Year</span>
+        <select id="map-year-select" aria-label="Year"></select>
+      </label>
+      <label class="alice-control" for="map-metric-select">
+        <span>Metric</span>
+        <select id="map-metric-select" aria-label="Metric">
+          <option value="median_2br_rent" selected>
+            Median 2-bedroom rent
+          </option>
+        </select>
+      </label>
+      <label class="alice-control" for="map-region-select">
+        <span>Region overlay</span>
+        <select id="map-region-select" aria-label="Region overlay">
+          <option value="">— none —</option>
+          <!-- populated by map.js from /api/map/regions -->
+        </select>
+      </label>
+    </div>
+
+    <div id="map-stats" class="map-stats"></div>
+
+    <div style="position: relative;">
+      <svg id="map-svg" class="map-svg" viewBox="0 0 975 610"
+           preserveAspectRatio="xMidYMid meet" aria-label="US choropleth">
+        <!-- All state paths render into this <g>; the zoom transform
+             is applied here so panning/zooming is a single matrix
+             update rather than re-projecting per-path. -->
+        <g class="map-zoom-target"></g>
+      </svg>
+      <div id="map-tooltip" class="map-tooltip" role="status" aria-live="polite"></div>
+
+      <!-- Zoom controls overlaid on the SVG's top-right corner.
+           Mouse wheel + drag-pan + pinch all work via d3.zoom; these
+           buttons exist for laptop trackpads and accessibility. -->
+      <div class="map-zoom-controls" role="group" aria-label="Map zoom">
+        <button type="button" id="map-zoom-in" class="map-zoom-btn"
+                aria-label="Zoom in" title="Zoom in">+</button>
+        <button type="button" id="map-zoom-out" class="map-zoom-btn"
+                aria-label="Zoom out" title="Zoom out">−</button>
+        <button type="button" id="map-zoom-reset" class="map-zoom-btn"
+                aria-label="Reset zoom" title="Reset to full US"
+                style="font-size: 0.85em;">⟳</button>
+      </div>
+    </div>
+
+    <div class="map-legend" id="map-legend">
+      <span class="map-legend-tick" id="map-legend-min">—</span>
+      <div class="map-legend-bar" id="map-legend-bar"></div>
+      <span class="map-legend-tick" id="map-legend-max">—</span>
+    </div>
+
+    <div id="map-region-info" class="map-region-info" hidden></div>
+
+    <div id="map-interp" class="alice-interp" style="margin-top: 1rem;"></div>
+
+    <!-- State profile drill — populated by map.js when a state is
+         clicked. Keeps the region/industry/resource narrative below
+         the map without obscuring it. -->
+    <div id="map-state-profile" class="map-state-profile" hidden></div>
+  </div>
+
+  <script src="/static/panels/panels.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/map.js?v={{ASSET_VERSION}}"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const yearSel = document.getElementById("map-year-select");
+      const metricSel = document.getElementById("map-metric-select");
+      const regionSel = document.getElementById("map-region-select");
+      const subtitle = document.getElementById("subtitle");
+
+      function load() {
+        KMap.mountMap({
+          year: yearSel.value ? parseInt(yearSel.value, 10) : null,
+          metric: metricSel.value,
+          region_overlay: regionSel.value || null,
+          onSubtitle: (text) => { subtitle.textContent = text; },
+          onYearsLoaded: (years, chosen) => {
+            if (yearSel.options.length > 0) return;
+            for (const y of years) {
+              const opt = document.createElement("option");
+              opt.value = String(y);
+              opt.textContent = String(y);
+              if (y === chosen) opt.selected = true;
+              yearSel.appendChild(opt);
+            }
+          },
+          onRegionsLoaded: (regions) => {
+            // Populate the region-overlay dropdown ONCE on first load.
+            if (regionSel.options.length > 1) return;  // already populated
+            for (const r of regions) {
+              const opt = document.createElement("option");
+              opt.value = r.key;
+              opt.textContent = `${r.label} (${r.states.length})`;
+              regionSel.appendChild(opt);
+            }
+          },
+        });
+      }
+      yearSel.addEventListener("change", load);
+      metricSel.addEventListener("change", load);
+      regionSel.addEventListener("change", load);
+      load();
+    });
+  </script>
+</body>
+</html>

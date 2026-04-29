@@ -1,0 +1,67 @@
+{#-
+  V1 — minimal tool-capable template for Karin's iter-3 LoRA on Jetson.
+
+  Key difference from V3: NO tool-schema injection at the user turn.
+  The LoRA was trained on [system, user, assistant_with_tool_call] where
+  the user message had no tools_json attached. It learned tool names +
+  arg shapes from the training distribution, not from serve-time schema.
+  Karin's system prompt also enumerates the tool vocabulary.
+
+  This fits ctx=4096 comfortably: ~2100 tok system + ~500 tok history +
+  user msg with no tool dump = well under budget. No 611 MiB prompt-cache
+  save pressure on Orin Nano's 7.4 GiB usable unified memory.
+
+  Kept:
+    - System block, with a one-line tool-capability nudge when tools present.
+    - Assistant tool_calls rendered as inline JSON (same shape training used).
+    - Tool results under <|start_header_id|>ipython<|end_header_id|>.
+-#}
+{%- if messages -%}
+{%- set has_system = (messages[0].role == 'system') -%}
+{%- if has_system or tools -%}
+<|start_header_id|>system<|end_header_id|>
+{%- if has_system %}
+
+{{ messages[0].content }}
+{%- endif %}
+{%- if tools %}
+
+You are a helpful assistant with tool calling capabilities. When you receive a tool call response, use the output to format an answer to the orginal use question.
+{%- endif %}<|eot_id|>
+{%- endif -%}
+{%- set dialog = messages[1:] if has_system else messages -%}
+{%- for message in dialog -%}
+{%- if message.role == 'user' -%}
+<|start_header_id|>user<|end_header_id|>
+
+{{ message.content }}<|eot_id|>{% if loop.last %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}
+{%- elif message.role == 'assistant' -%}
+<|start_header_id|>assistant<|end_header_id|>
+{%- if message.tool_calls %}
+
+{% for tc in message.tool_calls -%}
+{"name": "{{ tc.function.name }}", "parameters": {{ tc.function.arguments | tojson if tc.function.arguments is mapping else tc.function.arguments }}}
+{%- endfor %}
+{%- else %}
+
+{{ message.content }}{% if not loop.last %}<|eot_id|>{% endif %}
+{%- endif -%}
+{%- elif message.role == 'tool' -%}
+<|start_header_id|>ipython<|end_header_id|>
+
+{{ message.content }}<|eot_id|>{% if loop.last %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- else -%}
+{#- Non-messages path: fall back to simple single-turn completion -#}
+{%- if system %}<|start_header_id|>system<|end_header_id|>
+
+{{ system }}<|eot_id|>{% endif %}{% if prompt %}<|start_header_id|>user<|end_header_id|>
+
+{{ prompt }}<|eot_id|>{% endif %}<|start_header_id|>assistant<|end_header_id|>
+
+{% endif -%}

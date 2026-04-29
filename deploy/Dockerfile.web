@@ -1,0 +1,103 @@
+# Karin bridge + web UI container.
+#
+# Two base-image paths; pick one via the BASE_IMAGE build arg:
+#
+#   - x86 dev / CPU-only Whisper:
+#       docker compose build   (uses default BASE_IMAGE below)
+#
+#   - x86 with CUDA (much faster STT):
+#       BASE_IMAGE=nvidia/cuda:12.4.1-runtime-ubuntu22.04 docker compose build
+#
+#   - Jetson Orin (JetPack 6, ARM64, CUDA via L4T):
+#       BASE_IMAGE=dustynv/l4t-pytorch:r36.2.0 docker compose build
+#     Then torch is already installed in the base image and the pip
+#     install below skips reinstalling it.
+#
+# The image bundles faster-whisper, FastAPI, the full tool suite, and
+# all Python deps pinned to versions in bridge/requirements.txt.
+
+ARG BASE_IMAGE=python:3.12-slim
+FROM ${BASE_IMAGE}
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONUTF8=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_INDEX_URL=https://pypi.org/simple \
+    PIP_TRUSTED_HOST="pypi.org pypi.python.org files.pythonhosted.org"
+
+# Remove the dustynv base image's preconfigured pip.conf (points at a
+# local Jetson mirror that doesn't resolve inside the build container).
+RUN rm -f /etc/pip.conf /root/.pip/pip.conf 2>/dev/null || true
+
+# --- system deps -----------------------------------------------------------
+#
+# - ffmpeg: needed by web/server.py's decode_to_pcm16k for browser audio
+# - libsndfile1: soundfile backend
+# - portaudio19-dev: sounddevice (optional — only used by bridge.main voice loop)
+# - curl: health-check helper
+#
+# python3 + pip are present on python:* base images; on the nvidia/cuda
+# base they're installed here.
+RUN if command -v python3 >/dev/null 2>&1; then \
+        apt-get update && apt-get install -y --no-install-recommends \
+            ffmpeg libsndfile1 portaudio19-dev curl \
+            && rm -rf /var/lib/apt/lists/*; \
+    else \
+        apt-get update && apt-get install -y --no-install-recommends \
+            python3.12 python3-pip ffmpeg libsndfile1 portaudio19-dev curl \
+            && rm -rf /var/lib/apt/lists/* && \
+            ln -sf /usr/bin/python3.12 /usr/local/bin/python3 && \
+            ln -sf /usr/bin/python3.12 /usr/local/bin/python; \
+    fi
+
+# --- app layout ------------------------------------------------------------
+
+WORKDIR /app
+
+# Dependencies first for better layer caching — rebuilds are fast when
+# only source changes.
+COPY bridge/requirements.txt /app/bridge/requirements.txt
+
+# Install torch only if missing — on the JetPack / dustynv base it's
+# already present with CUDA; on python:3.12-slim we install the CPU
+# wheel (small, portable). Users who want x86 CUDA pass the
+# nvidia/cuda base image and add TORCH_INDEX_URL.
+ARG TORCH_INDEX_URL=""
+RUN python -c "import torch" 2>/dev/null || \
+    if [ -n "${TORCH_INDEX_URL}" ]; then \
+        pip install torch torchaudio --index-url "${TORCH_INDEX_URL}"; \
+    else \
+        pip install torch torchaudio; \
+    fi
+
+RUN pip install -r /app/bridge/requirements.txt
+
+# spaCy English small model (~50 MB). Used by bridge/news/noun_extract
+# for NER on cluster headlines. Base image exposes `python3` (no
+# unversioned `python` alias), so we call via python3.
+RUN python3 -m spacy download en_core_web_sm
+
+# Source code
+COPY bridge/ /app/bridge/
+COPY web/    /app/web/
+COPY config/ /app/config/
+COPY scripts/ /app/scripts/
+
+# Data dirs (gitignored on host, bind-mounted at runtime)
+RUN mkdir -p /app/data/conversations /app/data/memory \
+             /app/bridge/news/data /app/bridge/trackers/data /app/bridge/alerts/data
+
+# --- runtime ---------------------------------------------------------------
+
+EXPOSE 8001
+
+# Healthcheck: / is the index page; / or /api/health both respond 200 when up.
+# Port is templated — compose can override via KARIN_WEB_PORT (we run
+# uvicorn on :80 when network_mode: host is in use, :8001 otherwise).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${KARIN_WEB_PORT:-8001}/api/health" >/dev/null || exit 1
+
+CMD ["uvicorn", "web.server:app", "--host", "0.0.0.0", "--port", "8001"]

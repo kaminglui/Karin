@@ -1,0 +1,130 @@
+# Held-out test cases for the SFT pipeline.
+#
+# MUST be disjoint from anything in ../train/ or ../dpo_pairs/.
+# Use this file with scripts/eval_routing.py --cases to measure
+# generalization on prompts the model never saw during training.
+#
+# Seed set targets the weak buckets from v4:
+#   paraphrase (71.1), web_search (63.6), multi-turn (46.2),
+#   get_alerts (75.0), update_memory (81.8).
+#
+# Expand this file up to ~290 cases before running the post-SFT eval.
+
+cases:
+  # --- web_search held-out (how-to / review / DIY) ---
+  - prompt: "How do I reset my router?"
+    expected_tool: web_search
+    notes: sft-test, how-to
+  - prompt: "Top rated wireless earbuds under 100."
+    expected_tool: web_search
+    notes: sft-test, review
+  - prompt: "Best pizza places in NYC 2026."
+    expected_tool: web_search
+    notes: sft-test, review (not find_places — user wants rankings)
+  - prompt: "How to change a flat tire."
+    expected_tool: web_search
+    notes: sft-test, how-to
+  - prompt: "Tutorial on docker volumes."
+    expected_tool: web_search
+    notes: sft-test, tutorial
+
+  # --- wiki held-out (biography + history) ---
+  - prompt: "Who was Marie Curie?"
+    expected_tool: wiki
+    notes: sft-test, biography
+  - prompt: "When did the Titanic sink?"
+    expected_tool: wiki
+    notes: sft-test, history
+  - prompt: "Tell me about the Louvre Museum."
+    expected_tool: wiki
+    notes: sft-test, landmark
+  - prompt: "History of the Byzantine Empire."
+    expected_tool: wiki
+    notes: sft-test, history
+  - prompt: "How tall is Mount Everest?"
+    expected_tool: wiki
+    notes: sft-test, geography fact
+
+  # --- get_time held-out (terse + localized) ---
+  - prompt: "Time?"
+    expected_tool: get_time
+    notes: sft-test, terse
+  - prompt: "Day?"
+    expected_tool: get_time
+    notes: sft-test, terse
+  - prompt: "Hour in Sydney?"
+    expected_tool: get_time
+    expected_args:
+      location: Sydney
+    notes: sft-test, localized
+
+  # --- update_memory held-out (preferences + facts) ---
+  - prompt: "I'm a night owl."
+    expected_tool: update_memory
+    notes: sft-test, lifestyle fact
+  - prompt: "Call me Jamie please."
+    expected_tool: update_memory
+    notes: sft-test, name preference
+  - prompt: "I live in Vancouver."
+    expected_tool: update_memory
+    notes: sft-test, location fact
+  - prompt: "My car is a Honda Civic."
+    expected_tool: update_memory
+    notes: sft-test, possession fact
+
+  # --- graph held-out (plot/draw variations) ---
+  - prompt: "Plot y = cos(x)."
+    expected_tool: graph
+    notes: sft-test, plot
+  - prompt: "Visualize x^3 - x."
+    expected_tool: graph
+    notes: sft-test, visualize
+  - prompt: "Draw sqrt(x) from 0 to 10."
+    expected_tool: graph
+    expected_args:
+      x_min: 0
+      x_max: 10
+    notes: sft-test, draw + range
+
+  # --- get_alerts held-out (paraphrases) ---
+  - prompt: "Any dangerous weather incoming?"
+    expected_tool: get_alerts
+    notes: sft-test, paraphrase
+  - prompt: "Storm warnings near Dallas?"
+    expected_tool: get_alerts
+    expected_args:
+      location: Dallas
+    notes: sft-test, location-scoped
+
+  # --- multi-turn held-out ---
+  - history:
+      - user: "Weather in Paris."
+    prompt: "What about Berlin?"
+    expected_tool: get_weather
+    expected_args:
+      location: Berlin
+    notes: sft-test, multi-turn continuation
+  - history:
+      - user: "Gold price."
+    prompt: "And platinum?"
+    expected_tool: tracker
+    notes: sft-test, multi-turn asset swap
+  - history:
+      - user: "Sushi spots near me."
+    prompt: "Any with late hours?"
+    expected_tool: find_places
+    notes: sft-test, multi-turn refinement
+
+  # --- decoy held-out (should abstain) ---
+  - prompt: "Don't set an alarm, I'm off tomorrow."
+    expected_tool: null
+    notes: sft-test, negated reminder
+  - prompt: "I might move to Austin someday."
+    expected_tool: null
+    notes: sft-test, hypothetical — not a fact to save
+  - prompt: "Remember when we went hiking?"
+    expected_tool: null
+    notes: sft-test, reminisce — not update_memory
+  - prompt: "How about we grab dinner?"
+    expected_tool: null
+    notes: sft-test, social — not multi-turn continuation

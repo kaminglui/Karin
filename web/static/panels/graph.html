@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>News graph · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+  <!-- D3 v7, vendored under /static/vendor. Back to 2D after the 3D
+       experiment — Three.js pulled ~1.9 MB and the tight hub cluster
+       wasn't actually more legible when rotated. D3 is ~280 KB and
+       the hull bubbles give cleaner grouping visually. -->
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/vendor/d3.min.js"></script>
+  <style>
+    .graph-wrap {
+      margin-top: 0.25rem;
+      background: rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(var(--tint-rgb), 0.18);
+      border-radius: 10px;
+      padding: 0;
+      overflow: hidden;
+      min-height: 60vh;
+      position: relative;
+    }
+    #graph {
+      display: block;
+      width: 100%;
+      height: 72vh;
+      min-height: 460px;
+      background:
+        radial-gradient(circle at 50% 50%,
+          rgba(var(--tint-rgb), 0.03) 0%,
+          rgba(var(--tint-rgb), 0) 60%);
+    }
+    .graph-legend {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 0.7rem 0 0.3rem 0;
+      font-size: 0.82rem;
+      color: var(--muted, #6e5585);
+    }
+    .graph-legend .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(var(--tint-rgb), 0.18);
+    }
+    .graph-legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .graph-legend .hint {
+      margin-left: auto;
+      font-size: 0.78rem;
+    }
+    .graph-empty {
+      padding: 3rem 1rem;
+      text-align: center;
+      color: var(--muted, #6e5585);
+      font-size: 0.9rem;
+    }
+    .graph-tip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(var(--tint-rgb), 0.3);
+      border-radius: 6px;
+      padding: 0.3rem 0.55rem;
+      font-size: 0.8rem;
+      box-shadow: 0 2px 8px rgba(30, 20, 60, 0.1);
+      opacity: 0;
+      transition: opacity 0.12s ease;
+      z-index: 10;
+    }
+    .graph-tip.visible { opacity: 1; }
+
+    .hull {
+      fill-opacity: 0.1;
+      stroke-opacity: 0.3;
+      stroke-width: 1.5;
+      pointer-events: none;
+    }
+    .edge {
+      stroke: rgba(var(--tint-rgb), 0.5);
+      fill: none;
+    }
+    .edge.entity { stroke: rgba(var(--tint-rgb), 0.25); }
+    .edge.dim    { stroke: rgba(var(--tint-rgb), 0.06); }
+    .edge.highlight { stroke: rgba(var(--tint-rgb), 0.95); }
+    .node {
+      stroke: #fff;
+      stroke-width: 1.5;
+      cursor: grab;
+    }
+    .node.region { fill: #8b5fbf; }
+    .node.topic  { fill: #c97a2b; }
+    .node.event  { fill: #2e8b57; }
+    .node.entity {
+      fill: #a89ac0;
+      stroke: rgba(var(--tint-rgb), 0.35);
+      stroke-width: 1;
+    }
+    .node.dim { fill-opacity: 0.2; }
+    .node:active { cursor: grabbing; }
+    .node-label {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      fill: var(--text, #222);
+      text-anchor: middle;
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: rgba(255, 255, 255, 0.85);
+      stroke-width: 3;
+      user-select: none;
+    }
+    .node-label.entity {
+      font-size: 9px;
+      fill: #3a2e50;
+      font-weight: 400;
+    }
+    .node-label.dim { opacity: 0.3; }
+
+    /* Drill-down drawer: slides in from the right when a node/edge
+     * is clicked, showing the related news clusters. Close via X,
+     * click-outside, or Escape. */
+    .drill-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(420px, 92vw);
+      height: 100vh;
+      background: #fff;
+      border-left: 1px solid rgba(var(--tint-rgb), 0.22);
+      box-shadow: -4px 0 16px rgba(30, 20, 60, 0.1);
+      transform: translateX(100%);
+      transition: transform 0.22s ease-out;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .drill-drawer.open { transform: translateX(0); }
+    .drill-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(var(--tint-rgb), 0.15);
+    }
+    .drill-header h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .drill-header .sub {
+      font-size: 0.75rem;
+      color: var(--muted, #6e5585);
+      margin-top: 0.1rem;
+      font-weight: 400;
+    }
+    .drill-close {
+      background: transparent;
+      border: none;
+      font-size: 1.3rem;
+      line-height: 1;
+      color: var(--muted, #6e5585);
+      cursor: pointer;
+      padding: 0.2rem 0.55rem;
+    }
+    .drill-close:hover { color: var(--text, #222); }
+    .drill-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.65rem 1rem 1.2rem;
+    }
+    .drill-card {
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(var(--tint-rgb), 0.1);
+    }
+    .drill-card:last-child { border-bottom: none; }
+    .drill-card h3 {
+      margin: 0 0 0.25rem 0;
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+    .drill-meta {
+      font-size: 0.76rem;
+      color: var(--muted, #6e5585);
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.3rem;
+    }
+    .drill-meta .pill {
+      padding: 0.05rem 0.45rem;
+      border-radius: 999px;
+      background: rgba(var(--tint-rgb), 0.1);
+    }
+    .drill-meta .pill.confirmed { background: rgba(46, 139, 87, 0.15); color: #1f6b3f; }
+    .drill-meta .pill.provisional { background: rgba(201, 122, 43, 0.15); color: #8a4f12; }
+    .drill-meta .pill.developing { background: rgba(var(--tint-rgb), 0.15); color: #5c3b85; }
+    .drill-voice {
+      font-size: 0.82rem;
+      color: var(--text, #222);
+      margin-bottom: 0.25rem;
+    }
+    /* Override the panel-wide user-select:none for these two so a
+     * user can drag-select a headline or voice line to copy. Cursor
+     * flips to text-style to signal selectability. */
+    .drill-card h3,
+    .drill-voice {
+      user-select: text;
+      -webkit-user-select: text;
+      cursor: text;
+    }
+    .drill-actions {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .drill-actions a,
+    .drill-actions button {
+      font-size: 0.75rem;
+      color: var(--ea-accent, #8b5fbf);
+      text-decoration: none;
+      padding: 0.2rem 0.55rem;
+      background: rgba(var(--tint-rgb), 0.08);
+      border: 1px solid rgba(var(--tint-rgb), 0.18);
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .drill-actions a:hover,
+    .drill-actions button:hover {
+      background: rgba(var(--tint-rgb), 0.18);
+    }
+    .drill-actions button.copied {
+      background: rgba(46, 139, 87, 0.15);
+      border-color: rgba(46, 139, 87, 0.3);
+      color: #1f6b3f;
+    }
+    .drill-empty {
+      padding: 2rem 0;
+      text-align: center;
+      color: var(--muted, #6e5585);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>News graph</h1>
+      <span id="subtitle" class="subtitle">loading…</span>
+      <div class="panel-actions">
+        <a class="panel-link" href="/ui/news" title="Back to news panel">News</a>
+      </div>
+    </header>
+
+    <div class="graph-legend" aria-label="Legend">
+      <span class="chip"><span class="dot" style="background:#8b5fbf"></span>Region</span>
+      <span class="chip"><span class="dot" style="background:#c97a2b"></span>Topic</span>
+      <span class="chip"><span class="dot" style="background:#2e8b57"></span>Event</span>
+      <span class="chip"><span class="dot" style="background:#a89ac0"></span>Entity (learned)</span>
+      <span class="hint">drag · hover to focus · scroll to zoom</span>
+    </div>
+
+    <div class="graph-wrap">
+      <svg id="graph" role="img" aria-label="Relation graph of watchlist items"></svg>
+    </div>
+    <div id="graph-tip" class="graph-tip" aria-hidden="true"></div>
+
+    <!-- Drill-down drawer. Populated + slid in when a node or edge is
+         clicked; shows up to 10 related cluster briefs. -->
+    <aside id="drill-drawer" class="drill-drawer" aria-hidden="true"
+           aria-labelledby="drill-title">
+      <header class="drill-header">
+        <div>
+          <h2 id="drill-title">—</h2>
+          <div class="sub" id="drill-sub"></div>
+        </div>
+        <button type="button" class="drill-close"
+                id="drill-close" aria-label="Close">×</button>
+      </header>
+      <div class="drill-body" id="drill-body">
+        <div class="drill-empty">Click a node to see related news.</div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // Hub kinds get hulls + the "kind" category for grouping.
+      // Entities are leaves — no own hull, folded into their parent's
+      // kind group for the bubble but sized/styled differently.
+      const HUB_KINDS = ["region", "topic", "event"];
+      const KIND_COLOR = {
+        region: "#8b5fbf", topic: "#c97a2b", event: "#2e8b57",
+        entity: "#a89ac0",
+      };
+      const svgEl = document.getElementById("graph");
+      const subtitle = document.getElementById("subtitle");
+      const tip = document.getElementById("graph-tip");
+
+      async function boot() {
+        let data;
+        try {
+          const r = await fetch("/api/news/graph");
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          data = await r.json();
+        } catch (e) {
+          subtitle.textContent = "failed: " + e.message;
+          return;
+        }
+        const { nodes, edges, counts } = data;
+        const hubCount = nodes.filter((n) => HUB_KINDS.includes(n.kind)).length;
+        const entCount = nodes.length - hubCount;
+        subtitle.textContent =
+          `${counts.clusters} clusters · ${hubCount} hubs · ${entCount} entities · ${counts.edges} edges`;
+        if (!nodes.length) {
+          svgEl.insertAdjacentHTML("beforeend",
+            `<foreignObject x="0" y="0" width="100%" height="100%">
+               <div class="graph-empty" xmlns="http://www.w3.org/1999/xhtml">
+                 No graph to draw yet. Configure watchlists in
+                 <a href="/ui/settings">Settings</a>, then enable
+                 <code>news_keyword_learn</code> to get entity leaf
+                 nodes and give the poller a cycle.
+               </div>
+             </foreignObject>`);
+          return;
+        }
+        render(nodes, edges);
+      }
+
+      function render(rawNodes, rawEdges) {
+        const nodes = rawNodes.map((n) => ({ ...n }));
+        const edges = rawEdges.map((e) => ({ ...e }));
+
+        // Entities are now deduped by label — one node per unique
+        // entity, with edges to every hub that mentions it. No
+        // single-parent kind; they float between the hulls and their
+        // multiple connections visibly bridge the categories.
+
+        const rect = svgEl.getBoundingClientRect();
+        const width = Math.max(rect.width, 600);
+        const height = Math.max(rect.height, 460);
+
+        const svg = d3.select(svgEl)
+          .attr("viewBox", [0, 0, width, height])
+          .attr("preserveAspectRatio", "xMidYMid meet");
+        svg.selectAll("*").remove();
+
+        const root = svg.append("g").attr("class", "root");
+        svg.call(d3.zoom()
+          .scaleExtent([0.3, 5])
+          .on("zoom", (ev) => root.attr("transform", ev.transform)));
+
+        const hullLayer  = root.append("g").attr("class", "hull-layer");
+        const edgeLayer  = root.append("g").attr("class", "edge-layer");
+        const nodeLayer  = root.append("g").attr("class", "node-layer");
+        const labelLayer = root.append("g").attr("class", "label-layer");
+
+        // Two scales: hubs and entities. Hubs are big (visible anchors),
+        // entities are small orbiting leaves. Using sqrt on both so
+        // weight:100 vs weight:1 doesn't explode into a giant ball.
+        const hubMax = d3.max(nodes.filter((n) => HUB_KINDS.includes(n.kind)), (n) => n.weight) || 1;
+        const entMax = d3.max(nodes.filter((n) => n.kind === "entity"),       (n) => n.weight) || 1;
+        const rHub = d3.scaleSqrt().domain([1, hubMax]).range([10, 26]);
+        const rEnt = d3.scaleSqrt().domain([1, entMax]).range([3.5, 9]);
+        const nodeR = (n) => n.kind === "entity" ? rEnt(n.weight) : rHub(n.weight);
+
+        const eMax = d3.max(edges, (e) => e.weight) || 1;
+        const eWidth = d3.scaleSqrt().domain([1, eMax]).range([0.6, 4]);
+        const eAlpha = d3.scaleSqrt().domain([1, eMax]).range([0.2, 0.75]);
+
+        // Entity-to-hub edges: short, strong. Hub-to-hub edges:
+        // distance shrinks with weight so close pairs cluster.
+        const sim = d3.forceSimulation(nodes)
+          .force("link", d3.forceLink(edges)
+            .id((d) => d.id)
+            .distance((e) => {
+              const aEnt = (e.source.kind || e.source) === "entity";
+              const bEnt = (e.target.kind || e.target) === "entity";
+              if (aEnt || bEnt) return 36;                  // short leaf
+              return 180 - Math.min(140, e.weight * 1.5);   // tighter with weight
+            })
+            .strength((e) => {
+              const aEnt = (e.source.kind || e.source) === "entity";
+              const bEnt = (e.target.kind || e.target) === "entity";
+              if (aEnt || bEnt) return 0.9;                 // pin leaves
+              return Math.min(1, 0.15 + e.weight / (eMax * 2));
+            }))
+          .force("charge", d3.forceManyBody()
+            .strength((n) => n.kind === "entity" ? -60 : -400))
+          .force("center", d3.forceCenter(width / 2, height / 2))
+          .force("collide", d3.forceCollide().radius((n) => nodeR(n) + 3));
+
+        const edgeSel = edgeLayer.selectAll("line")
+          .data(edges).enter().append("line")
+          .attr("class", (e) => {
+            const aEnt = (e.source.kind || e.source) === "entity";
+            const bEnt = (e.target.kind || e.target) === "entity";
+            return "edge" + ((aEnt || bEnt) ? " entity" : "");
+          })
+          .attr("stroke-width", (d) => eWidth(d.weight))
+          .attr("stroke-opacity", (d) => eAlpha(d.weight));
+
+        const nodeSel = nodeLayer.selectAll("circle")
+          .data(nodes).enter().append("circle")
+          .attr("class", (d) => `node ${d.kind}`)
+          .attr("r", nodeR)
+          .call(drag(sim));
+
+        const labelSel = labelLayer.selectAll("text")
+          .data(nodes).enter().append("text")
+          .attr("class", (d) => "node-label" + (d.kind === "entity" ? " entity" : ""))
+          .text((d) => d.kind === "entity" ? d.label : `${d.label} (${d.weight})`);
+
+        // Hulls grouped by kind. Entities fold into their parent kind's
+        // hull via parent_kind. Gives each bucket a blob that surrounds
+        // the hub + its orbiting leaves together.
+        const hullSel = hullLayer.selectAll("path")
+          .data(HUB_KINDS)
+          .enter().append("path")
+          .attr("class", "hull")
+          .attr("fill",   (k) => KIND_COLOR[k])
+          .attr("stroke", (k) => KIND_COLOR[k]);
+
+        // Adjacency for hover highlighting.
+        const neighbors = new Map();
+        nodes.forEach((n) => neighbors.set(n.id, new Set([n.id])));
+        edges.forEach((e) => {
+          const a = e.source.id || e.source;
+          const b = e.target.id || e.target;
+          neighbors.get(a).add(b);
+          neighbors.get(b).add(a);
+        });
+
+        nodeSel.on("click", (ev, d) => {
+          ev.stopPropagation();
+          openDrill({
+            title: d.label,
+            sub: `${d.kind} · ${d.weight} clusters`,
+            clusterIds: d.cluster_ids || [],
+          });
+        });
+        edgeSel.on("click", (ev, d) => {
+          ev.stopPropagation();
+          const a = d.source.label || d.source;
+          const b = d.target.label || d.target;
+          openDrill({
+            title: `${a} ↔ ${b}`,
+            sub: `${d.weight} shared clusters`,
+            clusterIds: d.cluster_ids || [],
+          });
+        });
+
+        nodeSel
+          .on("mouseenter", (ev, d) => {
+            const nb = neighbors.get(d.id);
+            nodeSel.classed("dim", (n) => !nb.has(n.id));
+            labelSel.classed("dim", (n) => !nb.has(n.id));
+            edgeSel
+              .classed("dim", (e) => {
+                const a = e.source.id || e.source;
+                const b = e.target.id || e.target;
+                return !(a === d.id || b === d.id);
+              })
+              .classed("highlight", (e) => {
+                const a = e.source.id || e.source;
+                const b = e.target.id || e.target;
+                return a === d.id || b === d.id;
+              });
+            const label = d.kind === "entity"
+              ? `${d.label} — ${d.weight} mentions`
+              : `${d.label} — ${d.weight} clusters`;
+            showTip(ev, label);
+          })
+          .on("mousemove", moveTip)
+          .on("mouseleave", () => {
+            nodeSel.classed("dim", false);
+            labelSel.classed("dim", false);
+            edgeSel.classed("dim", false).classed("highlight", false);
+            hideTip();
+          });
+
+        edgeSel
+          .on("mouseenter", (ev, d) => {
+            const a = d.source.label || "";
+            const b = d.target.label || "";
+            showTip(ev, `${a} ↔ ${b} — ${d.weight}`);
+          })
+          .on("mousemove", moveTip)
+          .on("mouseleave", hideTip);
+
+        sim.on("tick", () => {
+          edgeSel
+            .attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y)
+            .attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y);
+          nodeSel.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+          labelSel
+            .attr("x", (d) => d.x)
+            .attr("y", (d) => d.y - nodeR(d) - 3);
+
+          hullSel.attr("d", (kind) => {
+            // Hulls wrap only hub nodes of this kind. Entities can
+            // connect to hubs of multiple kinds (e.g. Iran -> US +
+            // China + Defense), so they can't belong to one hull —
+            // they visually sit between the hulls instead, with their
+            // edges showing the shared concern.
+            const members = nodes.filter((n) => n.kind === kind);
+            if (!members.length) return null;
+            const pts = hullPoints(members);
+            const hull = d3.polygonHull(pts);
+            if (!hull) return null;
+            return "M" + hull.map(([x, y]) => `${x},${y}`).join("L") + "Z";
+          });
+        });
+
+        sim.alphaMin(0.01);
+      }
+
+      function hullPoints(members) {
+        // Expand each member into a ring so the hull encloses each
+        // node as a disc, not just the centers.
+        const pts = [];
+        const pad = 12;
+        for (const n of members) {
+          const r = (n.kind === "entity" ? 6 : 16) + pad;
+          for (let a = 0; a < 6; a++) {
+            const th = (a / 6) * 2 * Math.PI;
+            pts.push([n.x + Math.cos(th) * r, n.y + Math.sin(th) * r]);
+          }
+        }
+        return pts;
+      }
+
+      function drag(sim) {
+        function started(ev, d) {
+          if (!ev.active) sim.alphaTarget(0.3).restart();
+          d.fx = d.x; d.fy = d.y;
+        }
+        function dragged(ev, d) { d.fx = ev.x; d.fy = ev.y; }
+        function ended(ev, d) {
+          if (!ev.active) sim.alphaTarget(0);
+          d.fx = null; d.fy = null;
+        }
+        return d3.drag().on("start", started).on("drag", dragged).on("end", ended);
+      }
+
+      // --- Drill-down drawer ------------------------------------------
+
+      const drawer = document.getElementById("drill-drawer");
+      const drawerTitle = document.getElementById("drill-title");
+      const drawerSub = document.getElementById("drill-sub");
+      const drawerBody = document.getElementById("drill-body");
+      const drawerClose = document.getElementById("drill-close");
+
+      function openDrill({ title, sub, clusterIds }) {
+        drawerTitle.textContent = title;
+        drawerSub.textContent = sub;
+        drawer.classList.add("open");
+        drawer.setAttribute("aria-hidden", "false");
+        if (!clusterIds || clusterIds.length === 0) {
+          drawerBody.innerHTML =
+            `<div class="drill-empty">No related news stored for this node.
+             Entities on the graph carry up to the 10 most-recent clusters
+             they appeared in — if that list is empty, the entity hasn't
+             been re-learned since the Phase E pass last ran.</div>`;
+          return;
+        }
+        drawerBody.innerHTML =
+          `<div class="drill-empty">Loading ${clusterIds.length} stor${clusterIds.length === 1 ? "y" : "ies"}…</div>`;
+        Promise.all(
+          clusterIds.map((cid) =>
+            fetch(`/api/news/cluster/${encodeURIComponent(cid)}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+          ),
+        ).then((briefs) => {
+          const valid = briefs.filter((b) => b && b.cluster_id);
+          if (!valid.length) {
+            drawerBody.innerHTML =
+              `<div class="drill-empty">Clusters referenced here aren't in
+               the ledger anymore — they may have been absorbed by the
+               cross-verify merge layer.</div>`;
+            return;
+          }
+          drawerBody.innerHTML = valid.map(renderDrillCard).join("");
+        });
+      }
+
+      function renderDrillCard(b) {
+        const state = (b.state || "").toString().toLowerCase();
+        const stateShort = state.replace("provisionally_confirmed", "provisional");
+        const pillCls = ["confirmed", "provisional", "developing"].includes(stateShort)
+          ? stateShort : "developing";
+        const stale = b.is_stale
+          ? '<span class="pill">stale</span>' : "";
+        const sources = (b.top_sources || []).slice(0, 3).join(" · ");
+        const rawHeadline = b.headline || "(no headline)";
+        const headline = escHtml(rawHeadline);
+        const voice = b.voice_line ? escHtml(b.voice_line) : "";
+        const count = `${b.independent_confirmation_count || 0} independent · ${b.article_count || 0} total`;
+        // Google-search link uses the raw headline as-is; the user can
+        // refine from there. target="_blank" + rel="noopener" so it
+        // doesn't share the tab context with the graph panel.
+        const gSearch = "https://www.google.com/search?q=" +
+          encodeURIComponent(rawHeadline);
+        // Primary source: first member with extraction success wins
+        // (most readable article), otherwise the first member period.
+        // /api/news/cluster returns members sorted with extracted-ok
+        // first already, so members[0] is the right pick.
+        const primary = (b.members || [])[0];
+        const sourceLink = primary && primary.url ? `
+          <a href="${escHtml(primary.url)}" target="_blank" rel="noopener noreferrer"
+             title="Open on ${escHtml(primary.source_name || primary.source_id || "source")}">
+            Open on ${escHtml(primary.source_name || primary.source_id || "source")} ↗
+          </a>` : "";
+        return `
+          <article class="drill-card">
+            <h3>${headline}</h3>
+            <div class="drill-meta">
+              <span class="pill ${pillCls}">${stateShort || "developing"}</span>
+              ${stale}
+              <span>${escHtml(sources)}</span>
+            </div>
+            ${voice ? `<div class="drill-voice">${voice}</div>` : ""}
+            <div class="drill-meta"><span>${count}</span></div>
+            <div class="drill-actions">
+              ${sourceLink}
+              <a href="${escHtml(gSearch)}" target="_blank" rel="noopener noreferrer"
+                 title="Search this headline on Google">Search Google ↗</a>
+              <button type="button" class="drill-copy"
+                      data-copy="${escHtml(rawHeadline)}"
+                      title="Copy headline to clipboard">Copy headline</button>
+            </div>
+          </article>`;
+      }
+
+      function escHtml(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+        }[c]));
+      }
+
+      function closeDrill() {
+        drawer.classList.remove("open");
+        drawer.setAttribute("aria-hidden", "true");
+      }
+
+      drawerClose.addEventListener("click", closeDrill);
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && drawer.classList.contains("open")) closeDrill();
+      });
+      // Click on the SVG background (not a node/edge) closes the drawer.
+      // node/edge click handlers stopPropagation so they won't hit this.
+      svgEl.addEventListener("click", closeDrill);
+
+      // Copy-to-clipboard for headlines. Delegated listener on the
+      // drawer body so it picks up dynamically-rendered cards
+      // without having to re-attach per render. Fails soft: older
+      // browsers / non-HTTPS contexts without clipboard API fall
+      // back to a text-select prompt.
+      drawerBody.addEventListener("click", async (e) => {
+        const btn = e.target.closest("button.drill-copy");
+        if (!btn) return;
+        e.preventDefault();
+        const text = btn.getAttribute("data-copy") || "";
+        let ok = false;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            ok = true;
+          }
+        } catch (_) { /* fall through to failure UI */ }
+        if (ok) {
+          const original = btn.textContent;
+          btn.textContent = "Copied!";
+          btn.classList.add("copied");
+          setTimeout(() => {
+            btn.textContent = original;
+            btn.classList.remove("copied");
+          }, 1400);
+        } else {
+          btn.textContent = "Copy failed";
+          setTimeout(() => {
+            btn.textContent = "Copy headline";
+          }, 1400);
+        }
+      });
+
+      function showTip(ev, text) {
+        tip.textContent = text;
+        tip.classList.add("visible");
+        moveTip(ev);
+      }
+      function moveTip(ev) {
+        tip.style.left = (ev.pageX + 12) + "px";
+        tip.style.top  = (ev.pageY + 12) + "px";
+      }
+      function hideTip() { tip.classList.remove("visible"); }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

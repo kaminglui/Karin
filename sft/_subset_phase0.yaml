@@ -1,0 +1,28 @@
+cases:
+- prompt: Tell me about my schedule today.
+  expected_tool: null
+  notes: ambiguity, schedule-for-self is unclear (no calendar integration)
+- prompt: Run through what's on the agenda today.
+  expected_tool: get_digest
+  notes: gap fill, paraphrase of digest.
+- prompt: Chart the last 7 days of temperatures.
+  expected_tool: graph
+  notes: gap fill, time-series plot (may depend on other tools for data).
+- prompt: Solve 3 x squared plus 5 x minus 2 equals 0.
+  expected_tool: math
+  notes: gap fill, quadratic equation.
+- prompt: Once I finish dinner, nudge me about my pills.
+  expected_tool: schedule_reminder
+  notes: novel pattern — "once X, nudge me".
+- prompt: If traffic's bad tomorrow, ping me earlier than 8am.
+  expected_tool: schedule_reminder
+  notes: novel pattern — conditional + time-adjusted reminder.
+- prompt: How's tomorrow shaping up for a run?
+  expected_tool: get_weather
+  notes: novel pattern — activity-context weather query.
+- prompt: Can I BBQ outside today?
+  expected_tool: get_weather
+  notes: novel pattern — activity-permission phrasing.
+- prompt: Which costs more right now, gold or silver?
+  expected_tool: tracker
+  notes: novel pattern — "which of A or B" comparison.

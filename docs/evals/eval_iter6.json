@@ -1,0 +1,1639 @@
+{
+  "model": "karin-tuned-iter6:latest",
+  "base_url": "http://localhost:11434",
+  "passed": 106,
+  "total": 135,
+  "pass_rate": 0.7851851851851852,
+  "cases": [
+    {
+      "prompt": "What is Mount Fuji famous for?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "Mount Fuji"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 68.178
+    },
+    {
+      "prompt": "Hello!",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 0.0
+    },
+    {
+      "prompt": "Hi Karin.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 0.0
+    },
+    {
+      "prompt": "Thanks, that's all I needed.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 11.426
+    },
+    {
+      "prompt": "What's your name?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 9.458
+    },
+    {
+      "prompt": "Look up quantum computing on Wikipedia.",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "quantum computing"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 61.157
+    },
+    {
+      "prompt": "Remember that time we went hiking last summer?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 14.885
+    },
+    {
+      "prompt": "Call me when you're free.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "update_memory",
+      "actual_args": {
+        "fact": "prefers casual reminders"
+      },
+      "passed": false,
+      "reason": "expected no tool, got update_memory",
+      "latency_s": 17.933
+    },
+    {
+      "prompt": "Forget what I said about batteries.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 9.129
+    },
+    {
+      "prompt": "The gold standard of debugging is print statements.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "variable": "x",
+        "x_max": 10,
+        "x_min": -10,
+        "expression": "sin(x); cos(x)"
+      },
+      "passed": false,
+      "reason": "expected no tool, got graph",
+      "latency_s": 20.931
+    },
+    {
+      "prompt": "What's the weather and the news?",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": ""
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 25.134
+    },
+    {
+      "prompt": "Remind me to check the gold price tomorrow at 9am.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": {
+        "message": "gold"
+      },
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "2026-04-17T09:00:00Z",
+        "message": "check the gold price"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 20.419
+    },
+    {
+      "prompt": "Convert 100 usd to jpy and 5 miles to km.",
+      "expected_tool": "convert",
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "100",
+        "from_unit": "usd",
+        "to_unit": "jpy"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 72.588
+    },
+    {
+      "prompt": "History of the gold standard.",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "history of the gold standard"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 67.402
+    },
+    {
+      "prompt": "How many miles is it from NYC to LA?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "2500",
+        "from_unit": "mile",
+        "to_unit": "kilometer"
+      },
+      "passed": false,
+      "reason": "expected no tool, got convert",
+      "latency_s": 19.286
+    },
+    {
+      "prompt": "What's the weather in San Francisco?",
+      "expected_tool": "get_weather",
+      "expected_args": {
+        "location": "san francisco"
+      },
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "San Francisco"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 18.856
+    },
+    {
+      "prompt": "Convert 100 usd to jpy.",
+      "expected_tool": "convert",
+      "expected_args": {
+        "value": "100",
+        "from_unit": "usd",
+        "to_unit": "jpy"
+      },
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "100",
+        "from_unit": "usd",
+        "to_unit": "jpy"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 61.638
+    },
+    {
+      "prompt": "Thanks!",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.125
+    },
+    {
+      "prompt": "My favorite memory is our camping trip.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 10.606
+    },
+    {
+      "prompt": "Schedule conflicts are the worst.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "2026-04-17T08:00:00Z",
+        "message": "remind me to avoid schedule conflicts"
+      },
+      "passed": false,
+      "reason": "expected no tool, got schedule_reminder",
+      "latency_s": 20.738
+    },
+    {
+      "prompt": "Set aside some time for yourself.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 10.683
+    },
+    {
+      "prompt": "How's everybody doing this morning?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 11.867
+    },
+    {
+      "prompt": "Tell me a joke.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 11.265
+    },
+    {
+      "prompt": "Cancel that.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.75
+    },
+    {
+      "prompt": "Tell me about my schedule today.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "",
+        "message": ""
+      },
+      "passed": false,
+      "reason": "expected no tool, got schedule_reminder",
+      "latency_s": 72.121
+    },
+    {
+      "prompt": "How much is a dollar in 1970 money?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "purchasing power of the US dollar"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 66.174
+    },
+    {
+      "prompt": "What's the exchange rate history for USD/JPY?",
+      "expected_tool": "tracker",
+      "expected_args": null,
+      "actual_tool": "tracker",
+      "actual_args": {
+        "id": "usd_jpy"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 18.671
+    },
+    {
+      "prompt": "Remember Mount Everest?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 10.697
+    },
+    {
+      "prompt": "What's the truth about resistors?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.045
+    },
+    {
+      "prompt": "Good morning.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 0.0
+    },
+    {
+      "prompt": "Hey there.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.322
+    },
+    {
+      "prompt": "What's up?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.757
+    },
+    {
+      "prompt": "Have a good one.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "sin(x); cos(x)"
+      },
+      "passed": false,
+      "reason": "expected no tool, got graph",
+      "latency_s": 18.501
+    },
+    {
+      "prompt": "Cool, thanks.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "sin(x)"
+      },
+      "passed": false,
+      "reason": "expected no tool, got graph",
+      "latency_s": 18.632
+    },
+    {
+      "prompt": "Got it.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 7.822
+    },
+    {
+      "prompt": "I forgot what I was going to say.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 10.291
+    },
+    {
+      "prompt": "Let's convert this argument into a conversation.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.968
+    },
+    {
+      "prompt": "What's the time zone in Tokyo?",
+      "expected_tool": [
+        "get_time",
+        "wiki"
+      ],
+      "expected_args": null,
+      "actual_tool": "get_time",
+      "actual_args": {
+        "timezone": "Asia/Tokyo"
+      },
+      "passed": false,
+      "reason": "expected ['get_time', 'wiki'], got get_time",
+      "latency_s": 19.041
+    },
+    {
+      "prompt": "Tell me the weather and what time it is.",
+      "expected_tool": [
+        "get_weather",
+        "get_time"
+      ],
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": ""
+      },
+      "passed": false,
+      "reason": "expected ['get_weather', 'get_time'], got get_weather",
+      "latency_s": 19.783
+    },
+    {
+      "prompt": "What's the weather in Paris and London?",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "Paris"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 19.317
+    },
+    {
+      "prompt": "Convert 50 euros to dollars and give me the news.",
+      "expected_tool": "convert",
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "50",
+        "from_unit": "euro",
+        "to_unit": "usd"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 19.442
+    },
+    {
+      "prompt": "Set an alarm for 7am and tell me the weather tomorrow.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "2026-04-16T07:00:00Z",
+        "message": "alarm"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 20.024
+    },
+    {
+      "prompt": "Look up Marie Curie and Nikola Tesla.",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "Marie Curie"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 61.18
+    },
+    {
+      "prompt": "Convert 1 kilo to pounds and 100 miles to km.",
+      "expected_tool": "convert",
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "1",
+        "from_unit": "kg",
+        "to_unit": "lb"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 71.579
+    },
+    {
+      "prompt": "What's the gold price and the USD/JPY rate?",
+      "expected_tool": "tracker",
+      "expected_args": null,
+      "actual_tool": "tracker",
+      "actual_args": {
+        "id": "gold"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 18.194
+    },
+    {
+      "prompt": "What's the weather in New York and is there any severe weather alert?",
+      "expected_tool": [
+        "get_weather",
+        "get_alerts"
+      ],
+      "expected_args": null,
+      "actual_tool": "get_alerts",
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected ['get_weather', 'get_alerts'], got get_alerts",
+      "latency_s": 166.58
+    },
+    {
+      "prompt": "How much did a loaf of bread cost in 1950?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "price of bread in 1950"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 65.009
+    },
+    {
+      "prompt": "What was the price of gas in 1980?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "gas prices 1980"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 68.427
+    },
+    {
+      "prompt": "When was the Berlin Wall built?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "Berlin Wall"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 66.97
+    },
+    {
+      "prompt": "How much was the minimum wage in 1970?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "minimum wage 1970"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 62.464
+    },
+    {
+      "prompt": "What year did Queen Elizabeth II die?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "Queen Elizabeth II"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 67.528
+    },
+    {
+      "prompt": "How much was a house in 1960s America?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "median home price 1960s United States"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 67.611
+    },
+    {
+      "prompt": "What was life expectancy in 1920?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "life expectancy in 1920"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 68.935
+    },
+    {
+      "prompt": "How much did a Model T cost when it was new?",
+      "expected_tool": "wiki",
+      "expected_args": null,
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "Model T"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 68.338
+    },
+    {
+      "prompt": "Convert 72.5 fahrenheit to celsius.",
+      "expected_tool": "convert",
+      "expected_args": {
+        "value": "72.5",
+        "from_unit": "fahrenheit",
+        "to_unit": "celsius"
+      },
+      "actual_tool": "convert",
+      "actual_args": {
+        "to_unit": "celsius",
+        "value": "72.5",
+        "from_unit": "fahrenheit"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.299
+    },
+    {
+      "prompt": "What's the weather in St Petersburg, Russia?",
+      "expected_tool": "get_weather",
+      "expected_args": {
+        "location": "St Petersburg"
+      },
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "St Petersburg"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 19.84
+    },
+    {
+      "prompt": "Convert 1.5 lbs to grams.",
+      "expected_tool": "convert",
+      "expected_args": {
+        "value": "1.5",
+        "from_unit": "lbs",
+        "to_unit": "g"
+      },
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "1.5",
+        "from_unit": "lb",
+        "to_unit": "g"
+      },
+      "passed": false,
+      "reason": "arg 'from_unit': got 'lb', expected contains 'lbs'",
+      "latency_s": 21.146
+    },
+    {
+      "prompt": "Weather in S\u00e3o Paulo.",
+      "expected_tool": "get_weather",
+      "expected_args": {
+        "location": "S\u00e3o Paulo"
+      },
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "S\u00e3o Paulo"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.808
+    },
+    {
+      "prompt": "Set a reminder for 7:15 am tomorrow to take out the trash.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": {
+        "message": "trash"
+      },
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "2026-04-17T07:15:00Z",
+        "message": "take out the trash"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 22.5
+    },
+    {
+      "prompt": "What's the weather at zip 10001?",
+      "expected_tool": "get_weather",
+      "expected_args": {
+        "location": "10001"
+      },
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "zip 10001"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.654
+    },
+    {
+      "prompt": "Look up the population of Monaco.",
+      "expected_tool": "wiki",
+      "expected_args": {
+        "query": "Monaco"
+      },
+      "actual_tool": "wiki",
+      "actual_args": {
+        "query": "population of Monaco"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 67.959
+    },
+    {
+      "prompt": "Search for the best carbonara recipe.",
+      "expected_tool": "web_search",
+      "expected_args": {
+        "query": "carbonara"
+      },
+      "actual_tool": "web_search",
+      "actual_args": {
+        "query": "best carbonara recipe"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 60.417
+    },
+    {
+      "prompt": "What's 12 times 18?",
+      "expected_tool": "math",
+      "expected_args": null,
+      "actual_tool": "math",
+      "actual_args": {
+        "op": "evaluate",
+        "expression": "12*18"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 74.416
+    },
+    {
+      "prompt": "Directions to the nearest coffee shop.",
+      "expected_tool": "find_places",
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "sqrt(1/((x-12)**2+(y-3.5)**2))<0.01?1:0"
+      },
+      "passed": false,
+      "reason": "expected find_places, got graph",
+      "latency_s": 21.963
+    },
+    {
+      "prompt": "How about Chicago?",
+      "expected_tool": "get_weather",
+      "expected_args": {
+        "location": "Chicago"
+      },
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "sin(x)"
+      },
+      "passed": false,
+      "reason": "expected get_weather, got graph",
+      "latency_s": 18.4
+    },
+    {
+      "prompt": "And in Tokyo?",
+      "expected_tool": "get_time",
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "sin(x); cos(x)"
+      },
+      "passed": false,
+      "reason": "expected get_time, got graph",
+      "latency_s": 18.871
+    },
+    {
+      "prompt": "What about Newton?",
+      "expected_tool": "wiki",
+      "expected_args": {
+        "query": "Newton"
+      },
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected wiki, got <no tool>",
+      "latency_s": 13.011
+    },
+    {
+      "prompt": "Perfect, thanks.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 12.065
+    },
+    {
+      "prompt": "Actually make it 6pm instead.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "2023-01-01T18:00:00Z",
+        "message": "reminder"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 24.417
+    },
+    {
+      "prompt": "Never mind, cancel that.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 11.305
+    },
+    {
+      "prompt": "Anything on tech specifically?",
+      "expected_tool": "get_news",
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "log(x); sin(2*x)"
+      },
+      "passed": false,
+      "reason": "expected get_news, got graph",
+      "latency_s": 19.374
+    },
+    {
+      "prompt": "Cool.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.974
+    },
+    {
+      "prompt": "Don't convert me to pessimism.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.472
+    },
+    {
+      "prompt": "The weather has been weird lately.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected no tool, got get_weather",
+      "latency_s": 19.742
+    },
+    {
+      "prompt": "I'll search my memory for that.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 16.162
+    },
+    {
+      "prompt": "Make a note to self \u2014 don't panic.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "update_memory",
+      "actual_args": {
+        "fact": "prefers calm reminders"
+      },
+      "passed": false,
+      "reason": "expected no tool, got update_memory",
+      "latency_s": 18.638
+    },
+    {
+      "prompt": "Can you remember to bring joy today?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 12.045
+    },
+    {
+      "prompt": "The gold in your eyes is blinding.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "1",
+        "from_unit": "oz",
+        "to_unit": "g"
+      },
+      "passed": false,
+      "reason": "expected no tool, got convert",
+      "latency_s": 19.504
+    },
+    {
+      "prompt": "Forget about it, I figured it out.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 13.908
+    },
+    {
+      "prompt": "Let's schedule some drama for later.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 10.693
+    },
+    {
+      "prompt": "Search your heart and tell me the answer.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 12.275
+    },
+    {
+      "prompt": "I need to convert my life choices.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 14.867
+    },
+    {
+      "prompt": "Play some music for me.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 9.085
+    },
+    {
+      "prompt": "Text my mom that I'll be late.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "message": "Will be late",
+        "trigger_at": "+1h"
+      },
+      "passed": false,
+      "reason": "expected no tool, got schedule_reminder",
+      "latency_s": 23.592
+    },
+    {
+      "prompt": "How long until my next meeting?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 32.328
+    },
+    {
+      "prompt": "Book me a flight to Tokyo.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 30.014
+    },
+    {
+      "prompt": "Turn on the living room lights.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 29.812
+    },
+    {
+      "prompt": "Call 911.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "sin(x); cos(x)"
+      },
+      "passed": false,
+      "reason": "expected no tool, got graph",
+      "latency_s": 57.724
+    },
+    {
+      "prompt": "Give me my morning briefing.",
+      "expected_tool": "get_digest",
+      "expected_args": null,
+      "actual_tool": "get_digest",
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 20.786
+    },
+    {
+      "prompt": "Run through what's on the agenda today.",
+      "expected_tool": "get_digest",
+      "expected_args": null,
+      "actual_tool": "get_digest",
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 20.088
+    },
+    {
+      "prompt": "Quick summary of alerts and news, please.",
+      "expected_tool": "get_digest",
+      "expected_args": null,
+      "actual_tool": "get_alerts",
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected get_digest, got get_alerts",
+      "latency_s": 62.035
+    },
+    {
+      "prompt": "Plot sin(x) from 0 to 2 pi.",
+      "expected_tool": "graph",
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "x_min": 0,
+        "expression": "sin(x)",
+        "x_max": 6.283185307179586
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.344
+    },
+    {
+      "prompt": "Show me a graph of y equals x squared.",
+      "expected_tool": "graph",
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "x**2"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 18.567
+    },
+    {
+      "prompt": "Chart the last 7 days of temperatures.",
+      "expected_tool": "graph",
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "x_max": 0,
+        "expression": "temperature(x);",
+        "x_min": -6
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 23.31
+    },
+    {
+      "prompt": "What's the current through a 220 ohm resistor at 9 volts?",
+      "expected_tool": "circuit",
+      "expected_args": null,
+      "actual_tool": "circuit",
+      "actual_args": {
+        "op": "voltage_divider",
+        "R1": "220ohms",
+        "Vin": "9V"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 24.038
+    },
+    {
+      "prompt": "Calculate the RC time constant for 1 microfarad and 10 kilohms.",
+      "expected_tool": "circuit",
+      "expected_args": null,
+      "actual_tool": "circuit",
+      "actual_args": {
+        "op": "rc_time_constant",
+        "R": "10000",
+        "C": "0.000001"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 64.308
+    },
+    {
+      "prompt": "Voltage divider output for 12V across 10k and 4.7k resistors.",
+      "expected_tool": "circuit",
+      "expected_args": null,
+      "actual_tool": "circuit",
+      "actual_args": {
+        "op": "voltage_divider",
+        "R1": "10000",
+        "R2": "4700",
+        "Vin": "12"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 63.811
+    },
+    {
+      "prompt": "Remember that my favorite color is emerald green.",
+      "expected_tool": "update_memory",
+      "expected_args": {
+        "fact": "emerald"
+      },
+      "actual_tool": "update_memory",
+      "actual_args": {
+        "fact": "user prefers emerald green"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 19.285
+    },
+    {
+      "prompt": "Save that I prefer morning meetings over afternoon ones.",
+      "expected_tool": "update_memory",
+      "expected_args": {
+        "fact": "morning"
+      },
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected update_memory, got <no tool>",
+      "latency_s": 9.434
+    },
+    {
+      "prompt": "Note for next time \u2014 I'm allergic to peanuts.",
+      "expected_tool": "update_memory",
+      "expected_args": {
+        "fact": "peanut"
+      },
+      "actual_tool": "update_memory",
+      "actual_args": {
+        "fact": "allergic to peanuts"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 19.186
+    },
+    {
+      "prompt": "What's happening in tech today?",
+      "expected_tool": "get_news",
+      "expected_args": null,
+      "actual_tool": "get_news",
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 20.112
+    },
+    {
+      "prompt": "Any breaking headlines right now?",
+      "expected_tool": "get_news",
+      "expected_args": null,
+      "actual_tool": "get_news",
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 18.974
+    },
+    {
+      "prompt": "Any severe weather warnings in my area?",
+      "expected_tool": "get_alerts",
+      "expected_args": null,
+      "actual_tool": "get_alerts",
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 60.773
+    },
+    {
+      "prompt": "Are there any active hazard alerts?",
+      "expected_tool": "get_alerts",
+      "expected_args": null,
+      "actual_tool": "get_alerts",
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 62.097
+    },
+    {
+      "prompt": "Solve 3 x squared plus 5 x minus 2 equals 0.",
+      "expected_tool": "math",
+      "expected_args": null,
+      "actual_tool": "math",
+      "actual_args": {
+        "op": "solve",
+        "expression": "3*x**2+5*x-2",
+        "variable": "x"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 23.432
+    },
+    {
+      "prompt": "What's 15 percent of 240?",
+      "expected_tool": "math",
+      "expected_args": null,
+      "actual_tool": "math",
+      "actual_args": {
+        "op": "evaluate",
+        "expression": "(15/100)*240"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.791
+    },
+    {
+      "prompt": "Best pizza place near me?",
+      "expected_tool": "find_places",
+      "expected_args": null,
+      "actual_tool": "find_places",
+      "actual_args": {
+        "query": "pizza",
+        "location": ""
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 63.098
+    },
+    {
+      "prompt": "Where can I find a 24-hour pharmacy nearby?",
+      "expected_tool": "find_places",
+      "expected_args": null,
+      "actual_tool": "find_places",
+      "actual_args": {
+        "query": "pharmacy open 24",
+        "location": ""
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 20.239
+    },
+    {
+      "prompt": "Top reviews of the Sony WH-1000XM5 headphones.",
+      "expected_tool": "web_search",
+      "expected_args": null,
+      "actual_tool": "web_search",
+      "actual_args": {
+        "query": "top reviews Sony WH-1000XM5 headphones"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.761
+    },
+    {
+      "prompt": "How do I replace the thermostat in a Honda Civic?",
+      "expected_tool": "web_search",
+      "expected_args": null,
+      "actual_tool": "web_search",
+      "actual_args": {
+        "query": "replace thermostat in Honda Civic"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.88
+    },
+    {
+      "prompt": "When I get home, remind me to feed the cat.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "now+1h",
+        "message": "feed the cat"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.352
+    },
+    {
+      "prompt": "Remind me after my 3pm meeting to send the report.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "2026-04-16T15:00:00Z",
+        "message": "send the report"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.278
+    },
+    {
+      "prompt": "Once I finish dinner, nudge me about my pills.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "+1h",
+        "message": "nudge me about my pills"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 20.578
+    },
+    {
+      "prompt": "If traffic's bad tomorrow, ping me earlier than 8am.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "message": "ping me",
+        "trigger_at": "2023-01-01T07:00:00Z"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.46
+    },
+    {
+      "prompt": "Wake me if a storm comes through tonight.",
+      "expected_tool": [
+        "schedule_reminder",
+        null
+      ],
+      "expected_args": null,
+      "actual_tool": "schedule_reminder",
+      "actual_args": {
+        "trigger_at": "2026-04-16T22:00:00Z",
+        "message": "storm"
+      },
+      "passed": false,
+      "reason": "expected ['schedule_reminder', None], got schedule_reminder",
+      "latency_s": 26.102
+    },
+    {
+      "prompt": "Should I bring a jacket today?",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": ""
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 21.098
+    },
+    {
+      "prompt": "Is it pool weather in Miami right now?",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "Miami"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 20.998
+    },
+    {
+      "prompt": "How's tomorrow shaping up for a run?",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": ""
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 19.371
+    },
+    {
+      "prompt": "Can I BBQ outside today?",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": ""
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 42.036
+    },
+    {
+      "prompt": "Will I need sunscreen in San Diego this weekend?",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "San Diego"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 60.534
+    },
+    {
+      "prompt": "Compare Paris and London weather side by side.",
+      "expected_tool": "get_weather",
+      "expected_args": null,
+      "actual_tool": "get_weather",
+      "actual_args": {
+        "location": "Paris"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 60.321
+    },
+    {
+      "prompt": "Which costs more right now, gold or silver?",
+      "expected_tool": "tracker",
+      "expected_args": null,
+      "actual_tool": "tracker",
+      "actual_args": {
+        "id": "gold"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 75.405
+    },
+    {
+      "prompt": "Pull up news about Japan and the US.",
+      "expected_tool": "get_news",
+      "expected_args": null,
+      "actual_tool": "get_news",
+      "actual_args": {
+        "topic": "Japan"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 19.833
+    },
+    {
+      "prompt": "Find both a coffee shop and a pharmacy nearby.",
+      "expected_tool": "find_places",
+      "expected_args": null,
+      "actual_tool": "find_places",
+      "actual_args": {
+        "query": "coffee shop",
+        "location": ""
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 63.775
+    },
+    {
+      "prompt": "Convert 100 USD to EUR, and also to GBP.",
+      "expected_tool": "convert",
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "100",
+        "from_unit": "usd",
+        "to_unit": "eur"
+      },
+      "passed": true,
+      "reason": "",
+      "latency_s": 176.531
+    },
+    {
+      "prompt": "Wait, make it 15.",
+      "expected_tool": "schedule_reminder",
+      "expected_args": null,
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "sin(x); cos(x)"
+      },
+      "passed": false,
+      "reason": "expected schedule_reminder, got graph",
+      "latency_s": 68.224
+    },
+    {
+      "prompt": "Actually I meant Osaka.",
+      "expected_tool": "get_weather",
+      "expected_args": {
+        "location": "Osaka"
+      },
+      "actual_tool": "graph",
+      "actual_args": {
+        "expression": "sin(x); cos(x)"
+      },
+      "passed": false,
+      "reason": "expected get_weather, got graph",
+      "latency_s": 19.154
+    },
+    {
+      "prompt": "And also to GBP?",
+      "expected_tool": [
+        "convert",
+        "tracker"
+      ],
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "value": "1",
+        "from_unit": "USD",
+        "to_unit": "GBP"
+      },
+      "passed": false,
+      "reason": "expected ['convert', 'tracker'], got convert",
+      "latency_s": 20.987
+    },
+    {
+      "prompt": "Scratch that, never mind.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": "convert",
+      "actual_args": {
+        "from_unit": "mile",
+        "to_unit": "kilometer",
+        "value": "1"
+      },
+      "passed": false,
+      "reason": "expected no tool, got convert",
+      "latency_s": 19.989
+    },
+    {
+      "prompt": "Actually, try bolognese instead.",
+      "expected_tool": "web_search",
+      "expected_args": {
+        "query": "bolognese"
+      },
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": false,
+      "reason": "expected web_search, got <no tool>",
+      "latency_s": 10.619
+    },
+    {
+      "prompt": "What about that thing we talked about?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 17.046
+    },
+    {
+      "prompt": "Tell me more about the second one.",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 17.817
+    },
+    {
+      "prompt": "Remember the other day?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 8.981
+    },
+    {
+      "prompt": "Who's that?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 15.587
+    },
+    {
+      "prompt": "What do you mean?",
+      "expected_tool": null,
+      "expected_args": null,
+      "actual_tool": null,
+      "actual_args": {},
+      "passed": true,
+      "reason": "",
+      "latency_s": 17.8
+    }
+  ]
+}

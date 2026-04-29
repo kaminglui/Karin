@@ -1,0 +1,562 @@
+cases:
+- prompt: What is Mount Fuji famous for?
+  expected_tool: wiki
+  notes: classifier-abstain
+- prompt: Hello!
+  expected_tool: null
+  notes: chitchat
+- prompt: Hi Karin.
+  expected_tool: null
+  notes: chitchat
+- prompt: Thanks, that's all I needed.
+  expected_tool: null
+  notes: chitchat
+- prompt: What's your name?
+  expected_tool: null
+  notes: identity
+- prompt: Look up quantum computing on Wikipedia.
+  expected_tool: wiki
+  notes: classifier-hit, covers wikipedia|look\s+up
+- prompt: Remember that time we went hiking last summer?
+  expected_tool: null
+  notes: decoy, "remember that" is reminiscing, not a fact to store
+- prompt: Call me when you're free.
+  expected_tool: null
+  notes: decoy, "call me" is a chat aside, not a naming instruction
+- prompt: Forget what I said about batteries.
+  expected_tool: null
+  notes: decoy, retracting — should NOT call find_places
+- prompt: The gold standard of debugging is print statements.
+  expected_tool: null
+  notes: decoy, "gold" as figure of speech, not a price query
+- prompt: What's the weather and the news?
+  expected_tool: get_weather
+  notes: composite, first tool should be weather (both are fine)
+- prompt: Remind me to check the gold price tomorrow at 9am.
+  expected_tool: schedule_reminder
+  expected_args:
+    message: gold
+  notes: composite reminder. expected_args does a substring check on `message` so we catch the LoRA hallucinating an unrelated reminder body. `trigger_at` isn't pinned (hard to validate across dates) but the routing+message pair is a meaningful proxy.
+- prompt: Convert 100 usd to jpy and 5 miles to km.
+  expected_tool: convert
+  notes: composite, first tool must be convert
+- prompt: History of the gold standard.
+  expected_tool: wiki
+  notes: ambiguity, "gold" appears but prompt wants history not price
+- prompt: How many miles is it from NYC to LA?
+  expected_tool: null
+  notes: ambiguity, not a unit-conversion (convert) nor a places lookup
+- prompt: What's the weather in San Francisco?
+  expected_tool: get_weather
+  expected_args:
+    location: san francisco
+  notes: args, multi-word location
+- prompt: Convert 100 usd to jpy.
+  expected_tool: convert
+  expected_args:
+    value: '100'
+    from_unit: usd
+    to_unit: jpy
+  notes: args, 3-way extraction
+- history:
+  - user: Weather in Tokyo.
+  prompt: Thanks!
+  expected_tool: null
+  notes: multi-turn, chitchat follow-up must NOT re-call weather
+- prompt: My favorite memory is our camping trip.
+  expected_tool: null
+  notes: decoy, "memory" is reminiscing, not a fact to save
+- prompt: Schedule conflicts are the worst.
+  expected_tool: null
+  notes: decoy, "schedule" is complaint not a reminder
+- prompt: Set aside some time for yourself.
+  expected_tool: null
+  notes: decoy, "set" + "time" but generic advice
+- prompt: How's everybody doing this morning?
+  expected_tool: null
+  notes: decoy, chitchat that mentions "morning" (not get_time)
+- history:
+  - user: Weather in Tokyo.
+  prompt: Tell me a joke.
+  expected_tool: null
+  notes: multi-turn, topic switch — must NOT re-call weather
+- history:
+  - user: Remind me to buy milk tomorrow.
+  prompt: Cancel that.
+  expected_tool: null
+  notes: multi-turn, cancellation is chitchat/conversational, no tool
+- prompt: Tell me about my schedule today.
+  expected_tool: null
+  notes: ambiguity, schedule-for-self is unclear (no calendar integration)
+- prompt: How much is a dollar in 1970 money?
+  expected_tool: wiki
+  notes: ambiguity, historical CPI question — not convert/tracker
+- prompt: What's the exchange rate history for USD/JPY?
+  expected_tool: tracker
+  notes: ambiguity, "history" suggests wiki but it's financial tracker
+- prompt: Remember Mount Everest?
+  expected_tool: null
+  notes: ambiguity, rhetorical — not update_memory, not wiki
+- prompt: What's the truth about resistors?
+  expected_tool: null
+  notes: decoy, "truth" + circuit term but not a circuit query
+- prompt: Good morning.
+  expected_tool: null
+  notes: chitchat, greeting
+- prompt: Hey there.
+  expected_tool: null
+  notes: chitchat, greeting
+- prompt: What's up?
+  expected_tool: null
+  notes: chitchat, greeting
+- prompt: Have a good one.
+  expected_tool: null
+  notes: chitchat, farewell
+- prompt: Cool, thanks.
+  expected_tool: null
+  notes: chitchat, acknowledgement
+- prompt: Got it.
+  expected_tool: null
+  notes: chitchat, acknowledgement
+- prompt: I forgot what I was going to say.
+  expected_tool: null
+  notes: decoy, "forgot" but not an update_memory op
+- prompt: Let's convert this argument into a conversation.
+  expected_tool: null
+  notes: decoy, "convert" as figure of speech
+- prompt: What's the time zone in Tokyo?
+  expected_tool:
+    - get_time
+    - wiki
+  notes: judgment call. `get_time(timezone=Asia/Tokyo)` directly returns the current time there — defensible interpretation. `wiki` would describe Japan Standard Time as a concept. Either answers the user's likely intent so both are acceptable.
+
+# ============================================================
+# Expansion v2 (2026-04-20) — adds ~50 cases across under-served
+# categories: compound queries, historical-fact wiki, tool-arg
+# extraction, richer multi-turn, harder figurative decoys, and
+# no-tool-available edges. Guarded by sft/scripts/assert_disjoint.py
+# against train-set leakage.
+# ============================================================
+
+# ---- compound "A and B" queries ----
+- prompt: Tell me the weather and what time it is.
+  expected_tool:
+    - get_weather
+    - get_time
+  notes: compound; either tool is a valid first-call.
+- prompt: What's the weather in Paris and London?
+  expected_tool: get_weather
+  notes: compound location; single-tool call per location is expected, grade the first.
+- prompt: Convert 50 euros to dollars and give me the news.
+  expected_tool: convert
+  notes: compound; convert is the primary, news is secondary.
+- prompt: Set an alarm for 7am and tell me the weather tomorrow.
+  expected_tool: schedule_reminder
+  notes: compound; reminder primary, weather follow-up.
+- prompt: Look up Marie Curie and Nikola Tesla.
+  expected_tool: wiki
+  notes: compound wiki; both subjects should each trigger a wiki lookup.
+- prompt: Convert 1 kilo to pounds and 100 miles to km.
+  expected_tool: convert
+  notes: compound conversion.
+- prompt: What's the gold price and the USD/JPY rate?
+  expected_tool: tracker
+  notes: compound tracker query.
+- prompt: What's the weather in New York and is there any severe weather alert?
+  expected_tool:
+    - get_weather
+    - get_alerts
+  notes: compound weather + alerts; either is acceptable as first call.
+
+# ---- historical fact lookups ----
+- prompt: How much did a loaf of bread cost in 1950?
+  expected_tool: wiki
+  notes: historical price inquiry; wiki over web_search for well-known facts.
+- prompt: What was the price of gas in 1980?
+  expected_tool: wiki
+  notes: historical inflation-style question.
+- prompt: When was the Berlin Wall built?
+  expected_tool: wiki
+  notes: historical date question, wiki classic.
+- prompt: How much was the minimum wage in 1970?
+  expected_tool: wiki
+  notes: historical economics fact.
+- prompt: What year did Queen Elizabeth II die?
+  expected_tool: wiki
+  notes: historical event, wiki.
+- prompt: How much was a house in 1960s America?
+  expected_tool: wiki
+  notes: historical inflation question, same family as #26 "in 1970 money".
+- prompt: What was life expectancy in 1920?
+  expected_tool: wiki
+  notes: historical demographic fact.
+- prompt: How much did a Model T cost when it was new?
+  expected_tool: wiki
+  notes: historical product price.
+
+# ---- tool arg extraction (strict) ----
+- prompt: Convert 72.5 fahrenheit to celsius.
+  expected_tool: convert
+  expected_args:
+    value: '72.5'
+    from_unit: fahrenheit
+    to_unit: celsius
+  notes: args, fractional value + temperature units.
+- prompt: What's the weather in St Petersburg, Russia?
+  expected_tool: get_weather
+  expected_args:
+    location: St Petersburg
+  notes: args, disambiguated city name (Russia vs Florida).
+- prompt: Convert 1.5 lbs to grams.
+  expected_tool: convert
+  expected_args:
+    value: '1.5'
+    from_unit: lbs
+    to_unit: g   # substring-match: accepts both "g" abbreviation and "grams"
+  notes: "args, fractional weight. `to_unit` expected as `g` since substring matching accepts both `g` and `grams`."
+- prompt: Weather in São Paulo.
+  expected_tool: get_weather
+  expected_args:
+    location: São Paulo
+  notes: args, diacritics + foreign city name.
+- prompt: Set a reminder for 7:15 am tomorrow to take out the trash.
+  expected_tool: schedule_reminder
+  expected_args:
+    message: trash
+  notes: args, explicit time + message substring.
+- prompt: What's the weather at zip 10001?
+  expected_tool: get_weather
+  expected_args:
+    location: '10001'
+  notes: args, numeric ZIP code as location.
+- prompt: Look up the population of Monaco.
+  expected_tool: wiki
+  expected_args:
+    query: Monaco
+  notes: args, single-word subject.
+- prompt: Search for the best carbonara recipe.
+  expected_tool: web_search
+  expected_args:
+    query: carbonara
+  notes: args, explicit search verb + recipe keyword.
+- prompt: What's 12 times 18?
+  expected_tool: math
+  notes: basic arithmetic, routing-only check.
+- prompt: Directions to the nearest coffee shop.
+  expected_tool: find_places
+  notes: local POI lookup; args not pinned (geolocation-dependent).
+
+# ---- multi-turn follow-ups ----
+- history:
+    - user: What's the weather in NYC?
+  prompt: How about Chicago?
+  expected_tool: get_weather
+  expected_args:
+    location: Chicago
+  notes: multi-turn, follow-up location.
+- history:
+    - user: What time is it?
+  prompt: And in Tokyo?
+  expected_tool: get_time
+  notes: multi-turn, follow-up timezone.
+- history:
+    - user: Wiki on Einstein.
+  prompt: What about Newton?
+  expected_tool: wiki
+  expected_args:
+    query: Newton
+  notes: multi-turn, wiki topic switch.
+- history:
+    - user: Convert 100 usd to eur.
+  prompt: Perfect, thanks.
+  expected_tool: null
+  notes: multi-turn, post-tool ack — must not re-fire convert.
+- history:
+    - user: Remind me to call mom at 5pm.
+  prompt: Actually make it 6pm instead.
+  expected_tool: schedule_reminder
+  notes: multi-turn, reminder update is another schedule_reminder call.
+- history:
+    - user: Set a reminder for 7am.
+  prompt: Never mind, cancel that.
+  expected_tool: null
+  notes: multi-turn, explicit cancel — no tool since no cancel_reminder exists.
+- history:
+    - user: Get me the news.
+  prompt: Anything on tech specifically?
+  expected_tool: get_news
+  notes: multi-turn, news topic drill-down.
+- history:
+    - user: Wiki on volcanoes.
+  prompt: Cool.
+  expected_tool: null
+  notes: multi-turn, monosyllable ack.
+
+# ---- harder figurative decoys ----
+- prompt: Don't convert me to pessimism.
+  expected_tool: null
+  notes: decoy, "convert" figurative.
+- prompt: The weather has been weird lately.
+  expected_tool: null
+  notes: decoy, weather as conversation topic, not a forecast request.
+- prompt: I'll search my memory for that.
+  expected_tool: null
+  notes: decoy, "search" + "memory" both tool keywords but figurative.
+- prompt: Make a note to self — don't panic.
+  expected_tool: null
+  notes: decoy, self-addressed rumination, not an update_memory op.
+- prompt: Can you remember to bring joy today?
+  expected_tool: null
+  notes: decoy, rhetorical "remember to" without a concrete reminder.
+- prompt: The gold in your eyes is blinding.
+  expected_tool: null
+  notes: decoy, "gold" metaphorical.
+- prompt: Forget about it, I figured it out.
+  expected_tool: null
+  notes: decoy, conversational "forget about it", not a memory op.
+- prompt: Let's schedule some drama for later.
+  expected_tool: null
+  notes: decoy, "schedule" used flippantly, no concrete time.
+- prompt: Search your heart and tell me the answer.
+  expected_tool: null
+  notes: decoy, "search" as philosophical prompt.
+- prompt: I need to convert my life choices.
+  expected_tool: null
+  notes: decoy, "convert" figurative — cf. existing #37.
+
+# ---- no-tool-available edges ----
+- prompt: Play some music for me.
+  expected_tool: null
+  notes: no music tool exists; Karin should answer conversationally.
+- prompt: Text my mom that I'll be late.
+  expected_tool: null
+  notes: no SMS/messaging tool exists.
+- prompt: How long until my next meeting?
+  expected_tool: null
+  notes: no calendar integration; Karin should say so.
+- prompt: Book me a flight to Tokyo.
+  expected_tool: null
+  notes: no booking tool exists.
+- prompt: Turn on the living room lights.
+  expected_tool: null
+  notes: no smart-home tool exists.
+- prompt: Call 911.
+  expected_tool: null
+  notes: no phone/emergency tool exists; must not false-fire schedule_reminder on "call".
+
+# ============================================================
+# Expansion v3 (2026-04-20) — two goals:
+#
+#   (A) Close coverage GAPS — tools that currently have 0 or 1
+#       eval case. A single-case tool has no redundancy against
+#       noise; zero-case tools aren't tested at all. Target ≥3
+#       cases per tool.
+#
+#   (B) Pattern-novel generalization — cases whose STRUCTURE the
+#       LoRA likely didn't see in training (not just new content
+#       plugged into a trained template). These are the real
+#       generalization probes; the earlier cases mostly tested
+#       surface paraphrase within trained patterns.
+#
+# Still disjoint from training (guarded by assert_disjoint.py).
+# ============================================================
+
+# ---- (A) Gap fills: get_digest, graph, circuit, update_memory, ----
+# ----     get_news, get_alerts, math, find_places, web_search   ----
+
+# get_digest
+- prompt: Give me my morning briefing.
+  expected_tool: get_digest
+  notes: gap fill, canonical briefing request.
+- prompt: Run through what's on the agenda today.
+  expected_tool: get_digest
+  notes: gap fill, paraphrase of digest.
+- prompt: Quick summary of alerts and news, please.
+  expected_tool: get_digest
+  notes: gap fill, compound phrasing that should map to the unified digest tool.
+
+# graph
+- prompt: Plot sin(x) from 0 to 2 pi.
+  expected_tool: graph
+  notes: gap fill, trigonometric plot.
+- prompt: Show me a graph of y equals x squared.
+  expected_tool: graph
+  notes: gap fill, polynomial plot.
+- prompt: Chart the last 7 days of temperatures.
+  expected_tool: graph
+  notes: gap fill, time-series plot (may depend on other tools for data).
+
+# circuit
+- prompt: What's the current through a 220 ohm resistor at 9 volts?
+  expected_tool: circuit
+  notes: gap fill, Ohm's law question.
+- prompt: Calculate the RC time constant for 1 microfarad and 10 kilohms.
+  expected_tool: circuit
+  notes: gap fill, RC product.
+- prompt: Voltage divider output for 12V across 10k and 4.7k resistors.
+  expected_tool: circuit
+  notes: gap fill, divider formula.
+
+# update_memory
+# NOTE: update_memory's actual arg key is `fact`, not `value`. My v2
+# draft used `value`; fixed to `fact` so the args-strict check works.
+- prompt: Remember that my favorite color is emerald green.
+  expected_tool: update_memory
+  expected_args:
+    fact: emerald
+  notes: gap fill + args, explicit "remember that X" pattern.
+- prompt: Save that I prefer morning meetings over afternoon ones.
+  expected_tool: update_memory
+  expected_args:
+    fact: morning
+  notes: gap fill + args, preference save.
+- prompt: Note for next time — I'm allergic to peanuts.
+  expected_tool: update_memory
+  expected_args:
+    fact: peanut
+  notes: gap fill + args, medical preference.
+
+# get_news (+2)
+- prompt: What's happening in tech today?
+  expected_tool: get_news
+  notes: gap fill, topic-filtered news.
+- prompt: Any breaking headlines right now?
+  expected_tool: get_news
+  notes: gap fill, urgent-news phrasing.
+
+# get_alerts (+2)
+- prompt: Any severe weather warnings in my area?
+  expected_tool: get_alerts
+  notes: gap fill, explicit alert query.
+- prompt: Are there any active hazard alerts?
+  expected_tool: get_alerts
+  notes: gap fill, generic alert query.
+
+# math (+2)
+- prompt: Solve 3 x squared plus 5 x minus 2 equals 0.
+  expected_tool: math
+  notes: gap fill, quadratic equation.
+- prompt: What's 15 percent of 240?
+  expected_tool: math
+  notes: gap fill, percentage calculation.
+
+# find_places (+2)
+- prompt: Best pizza place near me?
+  expected_tool: find_places
+  notes: gap fill, local search.
+- prompt: Where can I find a 24-hour pharmacy nearby?
+  expected_tool: find_places
+  notes: gap fill, local filtered search.
+
+# web_search (+2)
+- prompt: Top reviews of the Sony WH-1000XM5 headphones.
+  expected_tool: web_search
+  notes: gap fill, product review query (wiki wouldn't have reviews).
+- prompt: How do I replace the thermostat in a Honda Civic?
+  expected_tool: web_search
+  notes: gap fill, how-to / DIY guide (wiki is for facts, not instructions).
+
+# ---- (B) Pattern-novel generalization probes ----
+
+# -- conditional / contextual reminders (pattern not in training) --
+- prompt: When I get home, remind me to feed the cat.
+  expected_tool: schedule_reminder
+  notes: novel pattern — conditional trigger ("when X happens") rather than trained "remind me to X at TIME".
+- prompt: Remind me after my 3pm meeting to send the report.
+  expected_tool: schedule_reminder
+  notes: novel pattern — relative trigger ("after EVENT").
+- prompt: Once I finish dinner, nudge me about my pills.
+  expected_tool: schedule_reminder
+  notes: novel pattern — "once X, nudge me".
+- prompt: If traffic's bad tomorrow, ping me earlier than 8am.
+  expected_tool: schedule_reminder
+  notes: novel pattern — conditional + time-adjusted reminder.
+- prompt: Wake me if a storm comes through tonight.
+  expected_tool:
+    - schedule_reminder
+    - null
+  notes: novel pattern — weather-conditional alarm. Either a reminder or "can't do that" is reasonable; accept both.
+
+# -- indirect / wrapped weather queries --
+- prompt: Should I bring a jacket today?
+  expected_tool: get_weather
+  notes: novel pattern — wrapped weather inquiry ("should I X?" where X depends on weather).
+- prompt: Is it pool weather in Miami right now?
+  expected_tool: get_weather
+  notes: novel pattern — colloquial weather framing.
+- prompt: How's tomorrow shaping up for a run?
+  expected_tool: get_weather
+  notes: novel pattern — activity-context weather query.
+- prompt: Can I BBQ outside today?
+  expected_tool: get_weather
+  notes: novel pattern — activity-permission phrasing.
+- prompt: Will I need sunscreen in San Diego this weekend?
+  expected_tool: get_weather
+  notes: novel pattern — future-activity weather forecast.
+
+# -- transformational compound queries --
+- prompt: Compare Paris and London weather side by side.
+  expected_tool: get_weather
+  notes: novel pattern — explicit comparison (not just "A and B").
+- prompt: Which costs more right now, gold or silver?
+  expected_tool: tracker
+  notes: novel pattern — "which of A or B" comparison.
+- prompt: Pull up news about Japan and the US.
+  expected_tool: get_news
+  notes: novel pattern — multi-topic news query.
+- prompt: Find both a coffee shop and a pharmacy nearby.
+  expected_tool: find_places
+  notes: novel pattern — compound local search.
+- prompt: Convert 100 USD to EUR, and also to GBP.
+  expected_tool: convert
+  notes: novel pattern — one value, multiple target units.
+
+# -- interrupted / corrected multi-turn --
+- history:
+    - user: Set a timer for 10 minutes.
+  prompt: Wait, make it 15.
+  expected_tool: schedule_reminder
+  notes: novel pattern — interrupted correction on a reminder.
+- history:
+    - user: Weather in Tokyo.
+  prompt: Actually I meant Osaka.
+  expected_tool: get_weather
+  expected_args:
+    location: Osaka
+  notes: novel pattern — corrected location mid-turn.
+- history:
+    - user: Convert 100 USD to EUR.
+  prompt: And also to GBP?
+  expected_tool:
+    - convert
+    - tracker
+  notes: novel pattern — compound follow-up. Either tool is defensible.
+- history:
+    - user: Remind me to call Dad at 3pm.
+  prompt: Scratch that, never mind.
+  expected_tool: null
+  notes: novel pattern — retraction after a reminder is a no-op (no cancel tool).
+- history:
+    - user: Search for carbonara recipes.
+  prompt: Actually, try bolognese instead.
+  expected_tool: web_search
+  expected_args:
+    query: bolognese
+  notes: novel pattern — corrected search query.
+
+# -- ambiguous / rhetorical (must resist firing) --
+- prompt: What about that thing we talked about?
+  expected_tool: null
+  notes: novel pattern — unresolvable reference, must not hallucinate into a tool.
+- prompt: Tell me more about the second one.
+  expected_tool: null
+  notes: novel pattern — ordinal reference without context.
+- prompt: Remember the other day?
+  expected_tool: null
+  notes: novel pattern — figurative "remember", conversational.
+- prompt: Who's that?
+  expected_tool: null
+  notes: novel pattern — pronominal reference with no antecedent.
+- prompt: What do you mean?
+  expected_tool: null
+  notes: novel pattern — clarification request, not a routable intent.

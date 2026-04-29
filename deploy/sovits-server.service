@@ -1,0 +1,31 @@
+# GPT-SoVITS api_v2.py inference server.
+#
+# This is a TEMPLATE — @REPO_ROOT@ and @USER@ are substituted by deploy/setup.sh
+# before installing into /etc/systemd/system/. Don't symlink this file directly.
+#
+# Manual control:
+#   sudo systemctl start   sovits-server
+#   sudo systemctl stop    sovits-server
+#   sudo systemctl status  sovits-server
+#   journalctl -fu sovits-server
+
+[Unit]
+Description=GPT-SoVITS api_v2.py inference server
+Documentation=https://github.com/RVC-Boss/GPT-SoVITS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@REPO_ROOT@/third_party/GPT-SoVITS
+Environment="PYTHONUNBUFFERED=1"
+Environment="PATH=@REPO_ROOT@/.venv/tts-server/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=@REPO_ROOT@/.venv/tts-server/bin/python api_v2.py -a 127.0.0.1 -p 9880 -c GPT_SoVITS/configs/tts_infer.yaml
+Restart=on-failure
+RestartSec=10
+# First-boot model loading can take a while.
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

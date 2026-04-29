@@ -1,0 +1,84 @@
+{
+  "enabled": true,
+  "watchlists": {
+    "regions": [
+      {
+        "id": "us",
+        "label": "United States",
+        "keywords": ["united states", "u.s.", "us", "washington", "congress", "fed"],
+        "priority": "high",
+        "enabled": true
+      },
+      {
+        "id": "china_mainland",
+        "label": "China Mainland",
+        "keywords": ["china", "beijing", "shanghai", "pboc", "ccp"],
+        "priority": "high",
+        "enabled": true
+      },
+      {
+        "id": "hong_kong",
+        "label": "Hong Kong",
+        "keywords": ["hong kong", "hk", "hksar", "legco", "hkd"],
+        "priority": "high",
+        "enabled": true
+      }
+    ],
+    "topics": [
+      {
+        "id": "ai",
+        "label": "AI",
+        "keywords": ["ai", "artificial intelligence", "openai", "anthropic", "model"],
+        "priority": "medium",
+        "enabled": true
+      },
+      {
+        "id": "semiconductors",
+        "label": "Semiconductors",
+        "keywords": ["chip", "chips", "semiconductor", "tsmc", "nvidia", "dram", "nand", "ssd"],
+        "priority": "high",
+        "enabled": true
+      },
+      {
+        "id": "macro",
+        "label": "Macroeconomy",
+        "keywords": ["inflation", "cpi", "interest rate", "fed", "tariff", "recession"],
+        "priority": "high",
+        "enabled": true
+      }
+    ],
+    "events": [
+      {
+        "id": "ukraine_war",
+        "label": "Russia-Ukraine War",
+        "keywords": ["ukraine", "russia", "kyiv", "moscow", "ceasefire", "missile strike"],
+        "priority": "high",
+        "enabled": true
+      },
+      {
+        "id": "gaza",
+        "label": "Israel-Palestine / Gaza",
+        "keywords": ["gaza", "israel", "hamas", "rafah", "hostages", "ceasefire"],
+        "priority": "high",
+        "enabled": true
+      },
+      {
+        "id": "iran",
+        "label": "Iran",
+        "keywords": ["iran", "tehran", "nuclear", "sanctions", "missile"],
+        "priority": "high",
+        "enabled": true
+      }
+    ]
+  },
+  "ranking": {
+    "region_match_boost": 2.0,
+    "topic_match_boost": 1.5,
+    "event_match_boost": 2.5,
+    "high_priority_multiplier": 1.5,
+    "medium_priority_multiplier": 1.2,
+    "provisionally_confirmed_bonus": 1.0,
+    "confirmed_bonus": 2.0,
+    "stale_penalty": 1.0
+  }
+}

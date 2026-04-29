@@ -1,0 +1,22 @@
+cases:
+- prompt: How much did a loaf of bread cost in 1950?
+  expected_tool: wiki
+  notes: historical price inquiry; wiki over web_search for well-known facts.
+- prompt: What was the price of gas in 1980?
+  expected_tool: wiki
+  notes: historical inflation-style question.
+- prompt: When was the Berlin Wall built?
+  expected_tool: wiki
+  notes: historical date question, wiki classic.
+- prompt: What year did Queen Elizabeth II die?
+  expected_tool: wiki
+  notes: historical event, wiki.
+- prompt: How much was a house in 1960s America?
+  expected_tool: wiki
+  notes: historical inflation question, same family as
+- prompt: How much did a Model T cost when it was new?
+  expected_tool: wiki
+  notes: historical product price.
+- prompt: How do I replace the thermostat in a Honda Civic?
+  expected_tool: web_search
+  notes: gap fill, how-to / DIY guide (wiki is for facts, not instructions).

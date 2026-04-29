@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Trackers · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>Trackers</h1>
+      <span id="subtitle" class="subtitle"></span>
+      <div class="panel-actions">
+        <button id="refresh-btn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <div id="trackers-panel-root"></div>
+  </div>
+
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/panels.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/trackers.js?v={{ASSET_VERSION}}"></script>
+  <script>
+    // Standalone-page bootstrap. ?id=X for a single tracker, otherwise
+    // shows the grid of all enabled trackers. UI-5 will reuse
+    // mountTrackersPanel() against a chat-embedded container and skip
+    // this boot entirely.
+    document.addEventListener("DOMContentLoaded", () => {
+      const root = document.getElementById("trackers-panel-root");
+      const subtitle = document.getElementById("subtitle");
+      const refreshBtn = document.getElementById("refresh-btn");
+
+      const params = new URLSearchParams(location.search);
+      const id = params.get("id") || null;
+
+      const controller = Trackers.mountTrackersPanel(root, {
+        id,
+        onSubtitle: (text) => { subtitle.textContent = text; },
+      });
+
+      refreshBtn.addEventListener("click", () => controller.refresh());
+    });
+  </script>
+</body>
+</html>

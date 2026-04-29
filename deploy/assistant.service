@@ -1,0 +1,34 @@
+# Karin voice bridge.
+#
+# This is a TEMPLATE — @REPO_ROOT@ and @USER@ are substituted by deploy/setup.sh
+# before installing into /etc/systemd/system/. Don't symlink this file directly.
+#
+# Requires= means assistant.service will be stopped if sovits-server.service
+# or ollama.service dies — voice loop is useless without either.
+#
+# ExecStartPre blocks until the TTS server is actually accepting requests.
+# "simple" type treats a process as "started" the moment it forks, not when
+# it's ready, so without this the bridge would race the TTS server and hit
+# ECONNREFUSED on its first /set_gpt_weights call.
+
+[Unit]
+Description=Karin voice bridge
+Documentation=file://@REPO_ROOT@/README.md
+After=network-online.target ollama.service sovits-server.service
+Wants=network-online.target
+Requires=ollama.service sovits-server.service
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@REPO_ROOT@
+Environment="PYTHONUNBUFFERED=1"
+Environment="PATH=@REPO_ROOT@/.venv/bridge/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStartPre=/bin/bash @REPO_ROOT@/deploy/wait-for-tts.sh http://127.0.0.1:9880 120
+ExecStart=@REPO_ROOT@/.venv/bridge/bin/python -m bridge.main --config @REPO_ROOT@/config/assistant.yaml
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

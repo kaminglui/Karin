@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>ALICE · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>ALICE</h1>
+      <span id="subtitle" class="subtitle"></span>
+    </header>
+
+    <div class="alice-controls" role="group" aria-label="ALICE inputs">
+      <label class="alice-control" for="alice-year-select">
+        <span>Year</span>
+        <select id="alice-year-select" aria-label="Year">
+          <!-- populated by alice.js from /api/alice's available_years.
+               Renders the latest available year as the default. -->
+        </select>
+      </label>
+      <label class="alice-control" for="alice-comp-select">
+        <span>Household</span>
+        <select id="alice-comp-select" aria-label="Household composition">
+          <!-- populated by alice.js from /api/alice's
+               available_compositions. Each option encodes both the
+               composition key (1A0K, 2A2K, etc.) and a human label
+               like "Couple + 2 children (canonical)". -->
+        </select>
+      </label>
+      <button type="button" id="alice-lookup-btn" class="alice-go-btn">
+        Estimate
+      </button>
+    </div>
+
+    <div id="alice-panel-root"></div>
+  </div>
+
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/panels.js?v={{ASSET_VERSION}}"></script>
+  <script src="/static/panels/alice.js?v={{ASSET_VERSION}}"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const root = document.getElementById("alice-panel-root");
+      const subtitle = document.getElementById("subtitle");
+      const yearSelect = document.getElementById("alice-year-select");
+      const compSelect = document.getElementById("alice-comp-select");
+      const lookupBtn = document.getElementById("alice-lookup-btn");
+
+      function load() {
+        const year = yearSelect.value;
+        const composition = compSelect.value || "2A2K";
+        Alice.mountAlicePanel(root, {
+          year: year ? parseInt(year, 10) : null,
+          composition,
+          onSubtitle: (text) => { subtitle.textContent = text; },
+          onYearsLoaded: (years, chosen) => {
+            if (yearSelect.options.length > 0) return;
+            for (const y of years) {
+              const opt = document.createElement("option");
+              opt.value = String(y);
+              opt.textContent = String(y);
+              if (y === chosen) opt.selected = true;
+              yearSelect.appendChild(opt);
+            }
+          },
+          onCompositionsLoaded: (comps, chosen) => {
+            if (compSelect.options.length > 0) return;
+            for (const c of comps) {
+              const opt = document.createElement("option");
+              opt.value = c.key;
+              opt.textContent = c.label;
+              if (c.key === chosen) opt.selected = true;
+              compSelect.appendChild(opt);
+            }
+          },
+        });
+      }
+
+      lookupBtn.addEventListener("click", load);
+      yearSelect.addEventListener("change", load);
+      compSelect.addEventListener("change", load);
+
+      load();
+    });
+  </script>
+</body>
+</html>

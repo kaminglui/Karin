@@ -1,0 +1,16 @@
+# Models Ollama should have available. One per line, pulled by deploy/setup.sh
+# via `ollama pull <model>`. Comments + blank lines skipped.
+#
+# Production base for the Karin routing LoRA (karin-tuned:latest is built
+# on top of this via an Ollama Modelfile ADAPTER directive — see
+# deploy/setup.sh "karin-tuned from HF" block). Q4_K_M, ~4.9 GB weights.
+mannix/llama3.1-8b-abliterated:tools-q4_k_m
+
+# Fallback / alternate bases (uncomment to also have them available):
+#
+# huihui_ai/qwen3.5-abliterated:4b   # Abliterated Qwen3.5 4B, ~2.5 GB.
+#                                    # Pre-LoRA baseline, lower routing
+#                                    # accuracy. Use if the mannix pull
+#                                    # fails or if you want a smaller
+#                                    # model for text-only smoke tests.
+# qwen2.5:3b                          # Smallest supported, ~2 GB.

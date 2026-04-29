@@ -1,0 +1,245 @@
+# Karin — base Docker Compose stack.
+#
+# This file alone is portable: services, volumes, ports, env vars.
+# Platform-specific bits (GPU access, base images) live in OVERLAYS:
+#
+#   docker-compose.gpu.yml      x86 / desktop with NVIDIA GPU
+#   docker-compose.jetson.yml   Jetson Orin (ARM64 / JetPack)
+#
+# Pick a platform once via .env (recommended):
+#
+#   cp .env.example .env
+#   # edit .env, uncomment the COMPOSE_FILE line for your platform
+#   docker compose up -d
+#
+# Or override on every call:
+#
+#   docker compose -f deploy/docker-compose.yml \
+#                  -f deploy/docker-compose.gpu.yml up -d
+#
+# Running the base file alone = CPU-only (slow but works for dev).
+
+services:
+
+  # Ollama runs ONLY under the docker-ollama profile. Default behavior
+  # is to reuse the HOST's native ollama (via host.docker.internal in
+  # the web service env). This avoids port :11434 collisions on hosts
+  # where ollama is already installed system-wide — extremely common
+  # on Jetson since the old setup.sh installed it natively.
+  #
+  # To run the docker Ollama instead:
+  #   docker compose --profile docker-ollama up -d
+  # (make sure the host's ollama.service is stopped first)
+  ollama:
+    profiles: [docker-ollama]
+    image: ollama/ollama:0.4.7
+    container_name: karin-ollama
+    volumes:
+      - ./ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    # Model auto-pulled on first boot; re-pull is a no-op.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        ollama serve &
+        sleep 3
+        ollama pull huihui_ai/qwen3.5-abliterated:4b || true
+        wait
+
+  # sovits is voice output. On VRAM-tight hardware (Jetson Orin Nano 8 GB)
+  # running both Qwen 4B fully on GPU AND sovits causes the LLM to spill
+  # to CPU and inference becomes ~3× slower. So sovits is opt-in via
+  # the `voice` profile — start with:
+  #   docker compose --profile voice up -d
+  # Without the profile, web runs but TTS calls fail-soft (text-only).
+  sovits:
+    profiles: [voice]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.sovits
+      args:
+        BASE_IMAGE: ${SOVITS_BASE_IMAGE:-python:3.12-slim}
+    image: karin/sovits:local
+    container_name: karin-sovits
+    volumes:
+      - ../third_party/GPT-SoVITS:/gpt-sovits
+      # Mount the voice weights at the SAME absolute path the web
+      # container uses (/app/characters). The bridge resolves the
+      # relative `tts.gpt_weights_path` config against its own
+      # REPO_ROOT (/app) and sends that resolved string to sovits via
+      # HTTP — so sovits has to see the files at the exact same path
+      # or it 400s with "no such file or directory".
+      - ../characters:/app/characters:ro
+    ports:
+      - "9880:9880"
+    restart: unless-stopped
+    environment:
+      - PYTHONUTF8=1
+      - PYTHONIOENCODING=utf-8
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        BASE_IMAGE: ${WEB_BASE_IMAGE:-python:3.12-slim}
+    image: karin/web:local
+    container_name: karin-web
+    # No depends_on: sovits — sovits is profile-gated. web fails-soft
+    # if sovits isn't reachable (TTS calls log a warning, text reply
+    # still goes through fully).
+    # network_mode: host so the container reaches the native ollama
+    # at 127.0.0.1:11434 directly (ollama binds loopback by default
+    # and won't accept connections from the docker bridge IP). The
+    # cost: compose `ports:` stanza is ignored — the app listens on
+    # the host interface. With NET_BIND_SERVICE we can also bind :80
+    # directly inside the container via uvicorn's port arg.
+    network_mode: host
+    volumes:
+      # Source code mounts -- host versions override the baked image
+      # so edits (scp from PC, Settings panel saves, etc.) are live
+      # without rebuilding the Docker image. The image is the
+      # fallback when these mounts are absent.
+      - ../bridge:/app/bridge
+      - ../web:/app/web
+      # Runtime data (writable)
+      - ../data:/app/data
+      # Config (read-only templates -- Settings panel writes to data/)
+      - ../config:/app/config:ro
+      # Character bundles: persona (voice.yaml), voice weights (voices/),
+      # and avatar expressions (expressions/). Bind-mounted so swapping
+      # characters doesn't require a rebuild.
+      - ../characters:/app/characters:ro
+      # Docker socket — lets bridge/voice.py start/stop the sovits
+      # container in response to /api/voice/{start,stop} from the UI
+      # toggle. Read-write because we issue POST commands.
+      #
+      # === SECURITY TRUST MODEL ===
+      # Mounting the docker socket RW grants the web container effective
+      # root on the host docker daemon (`docker run` inside → start any
+      # container as root on the host). This is acceptable ONLY for a
+      # single-user box where the same operator owns the host and all
+      # clients on the tailnet.
+      #
+      # If you ever expose this beyond a trusted tailnet:
+      #   1. Replace this mount with a docker-socket-proxy sidecar
+      #      (tecnativa/docker-socket-proxy) exposing only the specific
+      #      verbs bridge/voice.py needs (POST /containers/.../start,
+      #      POST /containers/.../stop).
+      #   2. Run this container with `user: "1000:<docker-gid>"` so it
+      #      drops root but can still talk to the proxy.
+      #   3. Bind uvicorn to :8001 instead of :80 so it doesn't need
+      #      CAP_NET_BIND_SERVICE (remove the `command:` line below).
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Tailscale socket — Phase H.d reads peer list via the local API
+      # to auto-detect devices for profile routing. Read-only; the
+      # bridge never writes to tailscale.
+      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock:ro
+    # TTS audio cache — tmpfs so each turn's WAV lives in RAM, bounded,
+    # and auto-clears on container restart. The conversation JSON keeps
+    # the ``audio_id`` pointer; a missing file after restart is a
+    # recoverable 404 the frontend handles gracefully. 256 MB is ~200
+    # replies of history before rotation on a mono 32kHz stream.
+    # Shadowing under ``data/`` means the tmpfs overlays the bind mount,
+    # so cached audio never lands on the host filesystem.
+    tmpfs:
+      - /app/data/audio_cache:size=256m
+    # ports: IGNORED under network_mode: host. uvicorn binds to
+    # 127.0.0.1:80 — the plain-HTTP port is NOT exposed on the tailnet.
+    # Tailscale Serve (provisioned by deploy/setup.sh) proxies :443 →
+    # 127.0.0.1:80 so clients get HTTPS at
+    # https://<device>.<tailnet>.ts.net with an auto-managed Let's
+    # Encrypt cert. Root in the container supplies CAP_NET_BIND_SERVICE
+    # for the low port.
+    command: uvicorn web.server:app --host 127.0.0.1 --port 80
+    # Healthcheck in Dockerfile.web reads this to probe the right port.
+    environment:
+      - KARIN_WEB_PORT=80
+      # Native ollama on the host — reachable as 127.0.0.1 under host net.
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://127.0.0.1:11434}
+      - KARIN_OLLAMA_BASE_URL=${KARIN_OLLAMA_BASE_URL:-http://127.0.0.1:11434}
+      # TTS server. Default: localhost (co-located sovits container).
+      # Override via .env to point at a remote PC over Tailscale:
+      #   KARIN_TTS_BASE_URL=http://<pc-tailscale-ip>:9880
+      - KARIN_TTS_BASE_URL=${KARIN_TTS_BASE_URL:-http://127.0.0.1:9880}
+      # STT server. Empty = local faster-whisper in this container.
+      # Set to the same voice sidecar URL as KARIN_TTS_BASE_URL to move
+      # Whisper off the Jetson too — the sidecar serves /tts + /transcribe
+      # from one process. See deploy/pc-tts/tts_server.py.
+      - KARIN_STT_BASE_URL=${KARIN_STT_BASE_URL:-}
+      # LLM model + timeout overrides — useful on Jetson where the
+      # default 4B abliterated model is too big to fully GPU-offload
+      # alongside sovits, causing CPU spillover and slow turns.
+      # Pick a smaller model via .env: KARIN_LLM_MODEL=qwen3.5:2b
+      - KARIN_LLM_MODEL=${KARIN_LLM_MODEL:-}
+      - KARIN_LLM_TIMEOUT=${KARIN_LLM_TIMEOUT:-300}
+      # KV-cache memory lever. Drop to 3072 on Orin Nano 8 GB so the 4B
+      # model fits 100% on GPU; 4096 forces a partial CPU spill that
+      # crashes the runner under flash-attention + KV q8.
+      - KARIN_NUM_CTX=${KARIN_NUM_CTX:-}
+      # STT device defaults to CUDA; overlays don't need to touch this,
+      # but the CPU path (base file only) flips it here:
+      - KARIN_STT_DEVICE=${KARIN_STT_DEVICE:-cuda}
+      - KARIN_STT_COMPUTE_TYPE=${KARIN_STT_COMPUTE_TYPE:-int8_float16}
+      # Multilingual-input opt-in (leave unset for English-only defaults):
+      - KARIN_STT_LANGUAGE=${KARIN_STT_LANGUAGE:-}
+      - KARIN_STT_MODEL=${KARIN_STT_MODEL:-}
+      # Voice feature flags. Currently default-off — the assistant runs
+      # as text-only so the LLM can use more tokens/VRAM for reasoning.
+      # To bring voice back: set KARIN_STT_ENABLED=true /
+      # KARIN_TTS_ENABLED=true in .env, then `docker compose up -d web`
+      # and (for TTS) `docker compose start sovits`. See RUNBOOK
+      # "Re-enabling voice" for the full checklist.
+      - KARIN_STT_ENABLED=${KARIN_STT_ENABLED:-false}
+      - KARIN_TTS_ENABLED=${KARIN_TTS_ENABLED:-false}
+      # Third-party API keys. Empty by default; set in .env to enable.
+      # EIA is used by the gas_retail tracker (register free at
+      # eia.gov/opendata/register.php). NewsAPI feeds AP/Reuters/Bloomberg
+      # into the news subsystem as WIRE-tier sources so the confidence
+      # machinery can reach CONFIRMED state (register free at
+      # newsapi.org/register).
+      - KARIN_EIA_API_KEY=${KARIN_EIA_API_KEY:-}
+      - KARIN_NEWSAPI_KEY=${KARIN_NEWSAPI_KEY:-}
+      # Outbound notifications (alerts, tracker shocks, reminders).
+      # Off by default — set KARIN_NOTIFICATIONS=true in .env once
+      # you've configured at least one channel below. See
+      # config/notify.example.yaml for routing rules + cooldowns.
+      - KARIN_NOTIFICATIONS=${KARIN_NOTIFICATIONS:-false}
+      # Discord webhook URL (Server Settings → Integrations →
+      # Webhooks → New Webhook → Copy URL). Format:
+      # https://discord.com/api/webhooks/<id>/<token>. Token is
+      # the secret — keep this URL out of source / chat / screenshots.
+      - KARIN_NOTIFY_DISCORD_WEBHOOK=${KARIN_NOTIFY_DISCORD_WEBHOOK:-}
+      # ntfy.sh is supported but legacy — see bridge/notify/channels.py
+      # NtfyChannel docstring + config/notify.example.yaml. Add
+      # KARIN_NOTIFY_NTFY_TOPIC + list "ntfy" in notify.yaml channels:
+      # to re-enable.
+      # Calendar integration (off by default — see config/calendar.example.yaml).
+      # Flip KARIN_CALENDAR=true AND set at least one per-calendar URL
+      # env var matching the `url_env` field in calendar.yaml. Naming
+      # convention: KARIN_CALENDAR_<LABEL>_URL.
+      - KARIN_CALENDAR=${KARIN_CALENDAR:-false}
+      - KARIN_CALENDAR_WORK_URL=${KARIN_CALENDAR_WORK_URL:-}
+      - KARIN_CALENDAR_PERSONAL_URL=${KARIN_CALENDAR_PERSONAL_URL:-}
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:v0.4.7
+    container_name: karin-openwebui
+    depends_on:
+      ollama:
+        condition: service_started
+    volumes:
+      - open-webui:/app/backend/data
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    restart: unless-stopped
+    profiles: [webui]
+
+volumes:
+  open-webui:

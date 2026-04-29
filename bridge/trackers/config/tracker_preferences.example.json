@@ -1,0 +1,10 @@
+{
+  "_about": "Copy to tracker_preferences.json and edit freely. With enabled=false, the entire file is treated as absent (config-file order wins). category_priority lists category strings in display order; unlisted categories fall to the end. tracker_order gives per-category overrides keyed by category id; within each list the first id sorts first. home_state is a two-letter US code that substitutes into tracker params: any `${home_state_padd}` placeholder resolves to the EIA PADD duoarea for that state (e.g. PA → R1Y). To watch gas prices in a SECOND region as well, add another tracker entry to trackers.json with an explicit duoarea — e.g. {\"id\": \"gas_retail_west\", \"label\": \"Retail Gasoline (West Coast)\", \"category\": \"energy\", \"source\": \"eia\", \"params\": {\"duoarea\": \"R50\", \"product\": \"EPMR\"}, \"cadence\": \"weekly\", \"stale_after_hours\": 192, \"history_days\": 365, \"enabled\": true}.",
+  "enabled": true,
+  "category_priority": ["metal", "energy", "fx", "food_index", "crypto"],
+  "tracker_order": {
+    "energy": ["gas_retail"],
+    "metal":  ["gold_usd"]
+  },
+  "home_state": "PA"
+}

@@ -1,0 +1,9 @@
+# Web UI dependencies (installed into the same venv as bridge/).
+#
+# FastAPI already pulls in starlette and pydantic as transitive deps.
+# uvicorn[standard] adds httptools + websockets for production-grade
+# ASGI serving.
+
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9

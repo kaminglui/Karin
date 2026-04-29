@@ -1,0 +1,3461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Settings · Karin</title>
+  <link rel="stylesheet" href="/static/panels/panels.css?v={{ASSET_VERSION}}">
+  <style>
+    /* Settings panel — Phase D: form-driven UIs for news / notify /
+     * trackers, with a read-only raw-JSON preview per section for
+     * power users. The backend endpoints are unchanged; each form
+     * serializes to the same JSON shape the textarea used to carry. */
+
+    /* Panel-wide non-editable rule lives in panels.css now. */
+
+    :root {
+      --ea-accent: rgb(var(--tint-rgb));
+      --ea-accent-soft: rgba(var(--tint-rgb), 0.12);
+      --ea-accent-strong: rgba(var(--tint-rgb), 0.35);
+      --ea-danger: #c0392b;
+      --ea-danger-soft: rgba(192, 57, 43, 0.07);
+      --ea-ok: #059669;
+      --ea-surface: rgba(255, 255, 255, 0.78);
+      --ea-muted: #6e5585;
+    }
+
+    /* Section cards */
+    .settings-section {
+      margin-bottom: 1.25rem;
+      padding: 1rem 1.1rem 0.9rem;
+      background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.72) 0%,
+        rgba(250, 247, 255, 0.6) 100%);
+      border: 1px solid rgba(var(--tint-rgb), 0.16);
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(30, 20, 60, 0.04);
+    }
+    .settings-section:last-child { margin-bottom: 0; }
+    .settings-section h2 {
+      margin: 0 0 0.3rem 0;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+    }
+    .settings-section .desc {
+      color: var(--ea-muted);
+      font-size: 0.85rem;
+      margin: 0 0 0.8rem 0;
+      line-height: 1.5;
+    }
+    .settings-hint {
+      font-size: 0.78rem;
+      color: var(--ea-muted);
+      margin-top: 0.45rem;
+      line-height: 1.45;
+    }
+    .settings-hint code {
+      background: var(--ea-accent-soft);
+      padding: 0.05rem 0.3rem;
+      border-radius: 3px;
+      font-size: 0.92em;
+    }
+
+    /* Buttons (all via .btn variants) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.42rem 0.95rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease,
+                  box-shadow 0.15s ease, transform 0.05s ease;
+      user-select: none;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { cursor: not-allowed; opacity: 0.55; }
+
+    .btn.primary {
+      background: var(--ea-accent);
+      border: 1px solid var(--ea-accent);
+      color: #fff;
+      box-shadow: 0 1px 2px rgba(var(--tint-rgb), 0.25);
+    }
+    .btn.primary:hover:not(:disabled) {
+      background: #7a4eb0;
+      box-shadow: 0 2px 6px rgba(var(--tint-rgb), 0.35);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border: 1px solid var(--ea-accent-strong);
+      color: var(--text, #222);
+    }
+    .btn.ghost:hover:not(:disabled) {
+      background: var(--ea-accent-soft);
+    }
+
+    .btn.danger-soft {
+      background: var(--ea-danger-soft);
+      border: 1px solid rgba(192, 57, 43, 0.25);
+      color: #962a23;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.82rem;
+    }
+    .btn.danger-soft:hover:not(:disabled) {
+      background: rgba(192, 57, 43, 0.16);
+    }
+
+    .btn.chip {
+      background: var(--ea-surface);
+      border: 1px dashed var(--ea-accent-strong);
+      color: var(--ea-muted);
+      padding: 0.3rem 0.7rem;
+      font-size: 0.8rem;
+    }
+    .btn.chip:hover:not(:disabled) {
+      background: var(--ea-accent-soft);
+      color: var(--text, #222);
+      border-style: solid;
+    }
+
+    .btn.dashed {
+      background: transparent;
+      border: 1px dashed var(--ea-accent-strong);
+      color: var(--text, #222);
+      padding: 0.35rem 0.85rem;
+      font-size: 0.82rem;
+    }
+    .btn.dashed:hover:not(:disabled) {
+      background: var(--ea-accent-soft);
+      border-style: solid;
+    }
+
+    .btn.icon {
+      padding: 0.28rem 0.5rem;
+      font-size: 0.85rem;
+      line-height: 1;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--ea-muted);
+    }
+    .btn.icon:hover:not(:disabled) {
+      background: var(--ea-accent-soft);
+      color: var(--text, #222);
+    }
+
+    /* Toggle switch — replaces raw checkboxes for "enabled" style
+     * booleans. Wraps an invisible <input type="checkbox"> so form
+     * serialization stays the same. */
+    .toggle {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      user-select: none;
+    }
+    .toggle input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .toggle .track {
+      width: 34px;
+      height: 20px;
+      border-radius: 12px;
+      background: rgba(var(--tint-rgb), 0.2);
+      position: relative;
+      transition: background 0.18s ease;
+      flex-shrink: 0;
+    }
+    .toggle .track::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      transition: left 0.18s ease, background 0.18s ease;
+    }
+    .toggle input:checked + .track {
+      background: var(--ea-accent);
+    }
+    .toggle input:checked + .track::after {
+      left: 16px;
+    }
+    .toggle input:focus-visible + .track {
+      box-shadow: 0 0 0 2px rgba(var(--tint-rgb), 0.45);
+    }
+
+    /* Generic form controls */
+    .pref-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+    .pref-row label.primary {
+      font-size: 0.88rem;
+      min-width: 9.5rem;
+    }
+    .pref-row select,
+    .pref-row input[type="text"],
+    .pref-row input[type="password"],
+    .pref-row input[type="number"],
+    .pref-row input[type="url"] {
+      padding: 0.38rem 0.6rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      border: 1px solid var(--ea-accent-strong);
+      border-radius: 6px;
+      background: var(--ea-surface);
+      color: var(--text, #222);
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .pref-row select:focus-visible,
+    .pref-row input:focus-visible {
+      outline: none;
+      border-color: var(--ea-accent);
+      box-shadow: 0 0 0 2px rgba(var(--tint-rgb), 0.25);
+    }
+    .pref-row .flex-grow { flex: 1 1 16rem; }
+
+    /* Form block wrapper */
+    .prefs-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      margin: 0.4rem 0 0.6rem 0;
+    }
+
+    /* Collapsible subsections */
+    .pref-group {
+      border: 1px solid rgba(var(--tint-rgb), 0.16);
+      border-radius: 8px;
+      padding: 0.55rem 0.85rem;
+      background: rgba(255, 255, 255, 0.5);
+      transition: border-color 0.15s ease;
+    }
+    .pref-group[open] {
+      border-color: rgba(var(--tint-rgb), 0.3);
+    }
+    .pref-group summary {
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .pref-group summary::-webkit-details-marker { display: none; }
+    .pref-group summary::before {
+      content: "▶";
+      font-size: 0.7rem;
+      color: var(--ea-muted);
+      transition: transform 0.15s ease;
+    }
+    .pref-group[open] summary::before {
+      transform: rotate(90deg);
+    }
+    .pref-group summary .count {
+      color: var(--ea-muted);
+      font-weight: 400;
+      margin-left: auto;
+      font-size: 0.82rem;
+    }
+    .pref-group summary .group-hint {
+      color: var(--ea-muted);
+      font-weight: 400;
+      font-size: 0.82rem;
+    }
+
+    /* Watchlist rows */
+    .pref-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin: 0.65rem 0 0.5rem 0;
+    }
+    .watchlist-row {
+      display: grid;
+      grid-template-columns: 8rem 1fr 5.5rem auto auto;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.15rem 0;
+    }
+    .watchlist-row input[type="text"] {
+      width: 100%;
+      padding: 0.32rem 0.55rem;
+      font-family: inherit;
+      font-size: 0.82rem;
+      border: 1px solid var(--ea-accent-strong);
+      border-radius: 5px;
+      background: var(--ea-surface);
+      color: var(--text, #222);
+      box-sizing: border-box;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .watchlist-row select {
+      padding: 0.32rem 0.4rem;
+      font-family: inherit;
+      font-size: 0.82rem;
+      border: 1px solid var(--ea-accent-strong);
+      border-radius: 5px;
+      background: var(--ea-surface);
+      color: var(--text, #222);
+    }
+    .watchlist-row input:focus-visible,
+    .watchlist-row select:focus-visible {
+      outline: none;
+      border-color: var(--ea-accent);
+      box-shadow: 0 0 0 2px rgba(var(--tint-rgb), 0.25);
+    }
+    .watchlist-row .toggle { font-size: 0.78rem; }
+    .watchlist-row .toggle .track { width: 28px; height: 16px; }
+    .watchlist-row .toggle .track::after { width: 12px; height: 12px; }
+    .watchlist-row .toggle input:checked + .track::after { left: 14px; }
+
+    /* Watchlist tabs — one collapsible group holding three tabs
+     * (Regions / Topics / Events). Only the active pane renders its
+     * rows; the others stay in the DOM (hidden) so their state +
+     * templates persist across tab switches. Outer <details> inherits
+     * the normal .pref-group padding so the collapse summary lines
+     * up with the other groups. */
+    .pref-watchlist-tabs > .tab-bar {
+      margin-top: 0.6rem;
+    }
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid rgba(var(--tint-rgb), 0.18);
+      padding: 0 0.1rem;
+    }
+    .tab-bar .tab {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--ea-muted);
+      padding: 0.55rem 0.95rem;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+      margin-bottom: -1px;   /* overlap border */
+    }
+    .tab-bar .tab:hover {
+      color: var(--text, #222);
+      background: var(--ea-accent-soft);
+    }
+    .tab-bar .tab.active {
+      color: var(--ea-accent);
+      border-bottom-color: var(--ea-accent);
+      font-weight: 600;
+    }
+    .tab-bar .tab .count {
+      color: var(--ea-muted);
+      font-weight: 400;
+      font-size: 0.78rem;
+      margin-left: 0.25rem;
+    }
+    .tab-bar .tab.active .count {
+      color: var(--ea-accent);
+    }
+    .tab-pane {
+      padding: 0.7rem 0.85rem 0.5rem;
+    }
+    .tab-pane[hidden] {
+      display: none;
+    }
+
+    /* Template chip row (quick-add) */
+    .template-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed rgba(var(--tint-rgb), 0.15);
+    }
+    .template-chips .label {
+      font-size: 0.78rem;
+      color: var(--ea-muted);
+      margin-right: 0.2rem;
+      align-self: center;
+    }
+
+    /* Empty state when a watchlist has no rows */
+    .pref-empty {
+      padding: 0.55rem 0.7rem;
+      border-radius: 6px;
+      background: var(--ea-accent-soft);
+      color: var(--ea-muted);
+      font-size: 0.82rem;
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* Ranking knob grid */
+    .pref-knob-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      gap: 0.55rem 1rem;
+      margin: 0.7rem 0 0.5rem 0;
+    }
+    .pref-knob-grid label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      gap: 0.5rem;
+      color: var(--text, #222);
+    }
+    .pref-knob-grid input[type="number"] {
+      width: 5rem;
+      padding: 0.28rem 0.45rem;
+      font-family: inherit;
+      font-size: 0.82rem;
+      border: 1px solid var(--ea-accent-strong);
+      border-radius: 5px;
+      background: var(--ea-surface);
+      color: var(--text, #222);
+    }
+    .pref-knob-grid input:focus-visible {
+      outline: none;
+      border-color: var(--ea-accent);
+      box-shadow: 0 0 0 2px rgba(var(--tint-rgb), 0.25);
+    }
+
+    /* Ordered-list editor (trackers: category priority, tracker order) */
+    .order-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin: 0.6rem 0 0.4rem 0;
+    }
+    .order-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 0.35rem;
+      align-items: center;
+      padding: 0.3rem 0.55rem;
+      background: var(--ea-surface);
+      border: 1px solid rgba(var(--tint-rgb), 0.2);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .order-item .name {
+      font-weight: 500;
+    }
+    .order-item .hint {
+      color: var(--ea-muted);
+      font-size: 0.78rem;
+    }
+
+    /* Category/tracker order. Per-level drag: categories swap with
+     * other cat-blocks, trackers only swap within their own block.
+     * Blocks are collapsible (chevron); drag still works when
+     * collapsed. Small toggle switches flip visibility per category
+     * and per tracker. */
+    .category-order {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin: 0.7rem 0 0.4rem 0;
+    }
+    .cat-block {
+      border: 1px solid rgba(var(--tint-rgb), 0.18);
+      border-radius: 7px;
+      padding: 0.35rem 0.6rem 0.45rem;
+      background: rgba(255, 255, 255, 0.45);
+    }
+    .cat-block[draggable="true"] {
+      cursor: grab;
+    }
+    .cat-block.dragging {
+      opacity: 0.4;
+    }
+    .cat-block.collapsed .tracker-rows {
+      display: none;
+    }
+    .cat-block.off {
+      opacity: 0.55;
+    }
+    .cat-header {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto auto auto;
+      gap: 0.45rem;
+      align-items: center;
+      padding: 0.1rem 0.15rem;
+      font-size: 0.85rem;
+    }
+    .cat-header .handle {
+      color: var(--ea-muted);
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+    .cat-header .chevron {
+      cursor: pointer;
+      color: var(--ea-muted);
+      font-size: 0.7rem;
+      width: 1rem;
+      text-align: center;
+      transition: transform 0.15s ease;
+    }
+    .cat-block:not(.collapsed) .cat-header .chevron {
+      transform: rotate(90deg);
+    }
+    .cat-header .name {
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cat-header .counts {
+      font-weight: 400;
+      color: var(--ea-muted);
+      font-size: 0.78rem;
+    }
+    .cat-header .toggle .track { width: 28px; height: 16px; }
+    .cat-header .toggle .track::after { width: 12px; height: 12px; }
+    .cat-header .toggle input:checked + .track::after { left: 14px; }
+    .tracker-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.28rem;
+      margin: 0.4rem 0 0.1rem 1.1rem;
+      padding-left: 0.55rem;
+      border-left: 2px solid rgba(var(--tint-rgb), 0.15);
+    }
+    .tracker-rows:empty {
+      display: none;
+    }
+    .trk-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto auto auto;
+      gap: 0.4rem;
+      align-items: center;
+      padding: 0.2rem 0.5rem;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(var(--tint-rgb), 0.15);
+      border-radius: 5px;
+      font-size: 0.8rem;
+      cursor: grab;
+    }
+    .trk-item.dragging {
+      opacity: 0.4;
+    }
+    .trk-item.off {
+      opacity: 0.55;
+    }
+    .trk-item .handle {
+      color: var(--ea-muted);
+      font-size: 0.85rem;
+      line-height: 1;
+    }
+    .trk-item .hint {
+      color: var(--ea-muted);
+      font-size: 0.76rem;
+    }
+    .trk-item.off .name,
+    .cat-block.off > .cat-header .name {
+      color: var(--ea-muted);
+    }
+    .trk-item .toggle .track { width: 26px; height: 14px; }
+    .trk-item .toggle .track::after { width: 10px; height: 10px; top: 2px; left: 2px; }
+    .trk-item .toggle input:checked + .track::after { left: 14px; }
+    .cat-block .trk-item .btn.icon {
+      padding: 0.15rem 0.38rem;
+      font-size: 0.78rem;
+    }
+
+    /* Secret input: eye toggle */
+    .secret-input {
+      display: inline-flex;
+      align-items: stretch;
+      border: 1px solid var(--ea-accent-strong);
+      border-radius: 6px;
+      background: var(--ea-surface);
+      overflow: hidden;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .secret-input:focus-within {
+      border-color: var(--ea-accent);
+      box-shadow: 0 0 0 2px rgba(var(--tint-rgb), 0.25);
+    }
+    .secret-input input {
+      border: none !important;
+      background: transparent !important;
+      outline: none;
+      padding: 0.38rem 0.6rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      color: var(--text, #222);
+      flex: 1;
+      min-width: 0;
+    }
+    .secret-input input:focus-visible { box-shadow: none !important; }
+    .secret-input button.reveal {
+      border: none;
+      border-left: 1px solid var(--ea-accent-strong);
+      background: transparent;
+      color: var(--ea-muted);
+      cursor: pointer;
+      padding: 0 0.7rem;
+      font-size: 1rem;
+      line-height: 1;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+    .secret-input button.reveal:hover {
+      background: var(--ea-accent-soft);
+      color: var(--text, #222);
+    }
+    .secret-input button.reveal.revealing {
+      background: var(--ea-accent);
+      color: #fff;
+    }
+
+    /* Learned-keywords section (Phase E). Read-only grouping of
+     * LLM-extracted entities per watchlist label. Kept intentionally
+     * plain — the surface is a diagnostic for now, not an editable
+     * pref. */
+    .learned-content {
+      margin-top: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    .learned-bucket {
+      border: 1px dashed rgba(var(--tint-rgb), 0.2);
+      border-radius: 6px;
+      padding: 0.45rem 0.7rem 0.55rem;
+      background: rgba(255, 255, 255, 0.3);
+    }
+    .learned-bucket-header {
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .learned-bucket-header .counts {
+      font-weight: 400;
+      color: var(--ea-muted);
+      font-size: 0.78rem;
+    }
+    .learned-entities {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      padding-top: 0.2rem;
+    }
+    .learned-entity {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.22rem 0.55rem;
+      background: var(--ea-surface);
+      border: 1px solid rgba(var(--tint-rgb), 0.2);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .learned-entity:hover {
+      background: var(--ea-accent-soft);
+      border-color: var(--ea-accent-strong);
+    }
+
+    /* Entity info popup — Wikipedia summary + actions */
+    .entity-popup-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      background: rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .entity-popup {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(30, 20, 60, 0.2);
+      max-width: 28rem;
+      width: 90vw;
+      padding: 1rem 1.2rem;
+      position: relative;
+    }
+    .entity-popup h4 {
+      margin: 0 0 0.15rem 0;
+      font-size: 1rem;
+    }
+    .entity-popup .entity-meta {
+      color: var(--ea-muted);
+      font-size: 0.78rem;
+      margin-bottom: 0.5rem;
+    }
+    .entity-popup .entity-summary {
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin-bottom: 0.7rem;
+      max-height: 10rem;
+      overflow-y: auto;
+    }
+    .entity-popup .entity-summary.loading {
+      color: var(--ea-muted);
+      font-style: italic;
+    }
+    .entity-popup .entity-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .entity-popup .entity-actions .btn {
+      font-size: 0.82rem;
+    }
+    .entity-popup .close-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.6rem;
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: var(--ea-muted);
+      padding: 0.2rem 0.4rem;
+    }
+    .learned-entity .count {
+      color: var(--ea-muted);
+      font-size: 0.72rem;
+    }
+    .learned-entity .kind {
+      color: var(--ea-muted);
+      font-size: 0.7rem;
+      font-style: italic;
+    }
+
+    /* Raw JSON preview textarea (all three sections). The textarea is
+     * readonly — hide the blinking caret and flip the cursor so it
+     * doesn't look like something the user can type into. Selection
+     * still works for copy/paste; only the insertion caret is killed.
+     * :focus suppressed so tab-through doesn't draw a focus ring on
+     * what's effectively a read-only panel. */
+    .pref-raw-json .settings-editor {
+      width: 100%;
+      min-height: 9rem;
+      padding: 0.55rem 0.7rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: var(--ea-muted);
+      background: rgba(var(--tint-rgb), 0.04);
+      border: 1px solid rgba(var(--tint-rgb), 0.2);
+      border-radius: 6px;
+      resize: vertical;
+      box-sizing: border-box;
+      margin-top: 0.55rem;
+      cursor: default;
+      caret-color: transparent;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(var(--tint-rgb), 0.35) transparent;
+    }
+    .pref-raw-json .settings-editor:focus,
+    .pref-raw-json .settings-editor:focus-visible {
+      outline: none;
+      caret-color: transparent;
+      border-color: rgba(var(--tint-rgb), 0.25);
+    }
+
+    /* Purely informational copy — not meant to be selected. */
+    .pref-empty,
+    .pref-group .group-hint,
+    .template-chips .label,
+    .settings-section .desc,
+    .settings-hint,
+    .order-item .hint {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .pref-raw-json .settings-editor::-webkit-scrollbar { width: 8px; }
+    .pref-raw-json .settings-editor::-webkit-scrollbar-thumb {
+      background: rgba(var(--tint-rgb), 0.3);
+      border-radius: 4px;
+    }
+
+    /* Actions row (Save / Revert / status) */
+    .settings-actions {
+      display: flex;
+      gap: 0.55rem;
+      margin-top: 0.8rem;
+      align-items: center;
+    }
+    .settings-status {
+      font-size: 0.82rem;
+      color: var(--ea-muted);
+      margin-left: 0.25rem;
+    }
+    .settings-status.ok    { color: var(--ea-ok); }
+    .settings-status.error { color: var(--ea-danger); }
+
+    /* --- Phase H: profile picker ------------------------------------ */
+    .profile-row {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .profile-row select,
+    .profile-row input[type="text"] {
+      padding: 0.38rem 0.6rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      border: 1px solid var(--ea-accent-strong);
+      border-radius: 6px;
+      background: var(--ea-surface);
+      color: var(--text, #222);
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+      min-width: 10rem;
+    }
+    .profile-row select:focus-visible,
+    .profile-row input[type="text"]:focus-visible {
+      outline: none;
+      border-color: var(--ea-accent);
+      box-shadow: 0 0 0 2px rgba(var(--tint-rgb), 0.25);
+    }
+    .profile-banner {
+      display: none;
+      margin-top: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      background: var(--ea-accent-soft);
+      border: 1px solid var(--ea-accent-strong);
+      border-radius: 6px;
+      color: var(--ea-muted);
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    .profile-banner.visible { display: block; }
+
+    /* Phase H.d: IP routing — editable device table + add form.
+     * Reuses `.pref-row` form tokens so dropdowns + inputs match the
+     * rest of the Settings page visually. */
+    .ip-route-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-bottom: 0.6rem;
+    }
+    .ip-route-table th {
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ea-muted);
+      padding: 0.35rem 0.5rem;
+      border-bottom: 2px solid rgba(var(--tint-rgb), 0.18);
+    }
+    .ip-route-table td {
+      padding: 0.4rem 0.5rem;
+      vertical-align: middle;
+      border-bottom: 1px solid rgba(var(--tint-rgb), 0.08);
+    }
+    .ip-route-table tr:last-child td { border-bottom: none; }
+    .ip-route-table .ip-addr {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      color: var(--ea-muted);
+    }
+    .ip-route-table .device-name {
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .ip-route-table .device-os {
+      color: var(--ea-muted);
+      font-size: 0.75rem;
+    }
+    .ip-route-table .online-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+    .ip-route-table .online-dot.on  { background: var(--ea-ok); }
+    .ip-route-table .online-dot.off { background: #9ca3af; }
+
+    /* Shared input/select styles for the routing table + add form.
+     * Matches the .pref-row tokens used elsewhere on the page. */
+    .ip-route-table input[type="text"],
+    .ip-route-table select,
+    .route-add-form select,
+    .route-add-form input[type="text"] {
+      padding: 0.38rem 0.6rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      border: 1px solid var(--ea-accent-strong);
+      border-radius: 6px;
+      background: var(--ea-surface);
+      color: var(--text, #222);
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+      box-sizing: border-box;
+    }
+    .ip-route-table input:focus-visible,
+    .ip-route-table select:focus-visible,
+    .route-add-form input:focus-visible,
+    .route-add-form select:focus-visible {
+      outline: none;
+      border-color: var(--ea-accent);
+      box-shadow: 0 0 0 2px rgba(var(--tint-rgb), 0.25);
+    }
+    .ip-route-table .col-nickname input { width: 100%; }
+    .ip-route-table .col-profile select { width: 100%; }
+    .ip-route-table .col-actions { width: 4.5rem; text-align: center; }
+
+    /* Add-device form — laid out as label + field rows */
+    .route-add-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+      padding: 0.7rem 0.7rem 0.6rem;
+      background: var(--ea-accent-soft);
+      border-radius: 8px;
+    }
+    .route-add-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .route-add-row label {
+      font-size: 0.82rem;
+      min-width: 4.5rem;
+      color: var(--ea-muted);
+    }
+    .route-add-row select,
+    .route-add-row input[type="text"] {
+      flex: 1 1 10rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>Settings</h1>
+      <span id="subtitle" class="subtitle">preferences, channels &amp; trackers</span>
+    </header>
+
+    <!-- ======================== PROFILE ======================== -->
+    <section class="settings-section" data-kind="profile">
+      <h2>Profile</h2>
+      <p class="desc">
+        Each profile keeps its own watchlists, reminders, alert
+        cooldowns, and location. Shared content (RSS feeds, market data)
+        is the same across profiles.
+      </p>
+      <div class="profile-row">
+        <label class="primary" for="profile-select">Active</label>
+        <select id="profile-select"></select>
+        <input type="text" id="profile-new-name" placeholder="new profile name"
+               maxlength="32" autocomplete="off">
+        <button type="button" class="btn ghost" id="profile-create-btn">Create</button>
+        <span class="settings-status" data-kind="profile"></span>
+      </div>
+      <div class="profile-banner" id="profile-banner">
+        Profile switch saved. <strong>Restart the bridge</strong> for
+        all subsystems to pick it up (reminders, alerts, and feedback
+        are still bound to the prior profile until restart).
+      </div>
+
+      <details class="pref-group" style="margin-top:0.8rem">
+        <summary>
+          IP routing
+          <span class="group-hint">— auto-select profile by Tailscale IP</span>
+        </summary>
+        <p class="settings-hint" style="margin-bottom:0.6rem">
+          Map each device's Tailscale IP to a profile. When a request arrives
+          from a mapped IP, the system auto-switches to that profile (restart
+          required to fully apply). Devices not listed fall back to the manual
+          dropdown above.
+        </p>
+        <div id="ip-routing-rows"></div>
+        <div class="route-add-form">
+          <div class="route-add-row">
+            <label for="ip-routing-new-device">Device</label>
+            <select id="ip-routing-new-device">
+              <option value="">-- pick a device --</option>
+            </select>
+          </div>
+          <div class="route-add-row">
+            <label for="ip-routing-new-ip">Or IP</label>
+            <input type="text" id="ip-routing-new-ip" placeholder="100.x.y.z (manual)"
+                   maxlength="45" autocomplete="off">
+          </div>
+          <div class="route-add-row">
+            <label for="ip-routing-new-profile">Profile</label>
+            <select id="ip-routing-new-profile"></select>
+          </div>
+          <div class="route-add-row">
+            <label></label>
+            <button type="button" class="btn primary" id="ip-routing-add-btn"
+                    style="flex:0 0 auto">Add device</button>
+            <span class="settings-status" data-kind="iprouting"></span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ======================== NEWS ======================== -->
+    <!-- ======================== LOCATION ======================== -->
+    <section class="settings-section" data-kind="location">
+      <h2>Location</h2>
+      <p class="desc">
+        Used by the alerts panel to score signals by proximity (closer
+        events get higher threat scores) and by tools that need a
+        local context. City alone is the minimum useful entry; lat/lon
+        give the threat-distance computation more precision.
+      </p>
+
+      <div class="prefs-form">
+        <div class="pref-row">
+          <label class="primary" for="location-city">City</label>
+          <input id="location-city" type="text" class="flex-grow"
+                 placeholder="e.g. San Francisco" autocomplete="off"
+                 spellcheck="false" maxlength="80">
+        </div>
+        <div class="pref-row">
+          <label class="primary" for="location-region">Region/state</label>
+          <input id="location-region" type="text" class="flex-grow"
+                 placeholder="e.g. CA or California" autocomplete="off"
+                 spellcheck="false" maxlength="80">
+        </div>
+        <div class="pref-row">
+          <label class="primary" for="location-country">Country</label>
+          <input id="location-country" type="text" class="flex-grow"
+                 placeholder="e.g. US" autocomplete="off"
+                 spellcheck="false" maxlength="40">
+        </div>
+        <div class="pref-row">
+          <label class="primary" for="location-latitude">Latitude</label>
+          <input id="location-latitude" type="number" step="0.0001"
+                 placeholder="optional, e.g. 37.7749"
+                 autocomplete="off">
+        </div>
+        <div class="pref-row">
+          <label class="primary" for="location-longitude">Longitude</label>
+          <input id="location-longitude" type="number" step="0.0001"
+                 placeholder="optional, e.g. -122.4194"
+                 autocomplete="off">
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button type="button" class="btn primary" data-action="save"
+                data-kind="location">Save location</button>
+        <button type="button" class="btn ghost" data-action="revert"
+                data-kind="location">Revert</button>
+        <span class="settings-status" data-kind="location"></span>
+      </div>
+      <div class="settings-hint">
+        Saves to the active profile's <code>preferences.json</code>.
+        Alerts pick up the new location on the next refresh — no
+        bridge restart required.
+      </div>
+    </section>
+
+    <!-- ======================== DATA SOURCE API KEYS ======================== -->
+    <section class="settings-section" data-kind="api_keys">
+      <h2>Data source API keys</h2>
+      <p class="desc">
+        Save free-tier API keys for upstream data sources here so the
+        county-overlay populators can use them without an
+        <code>.env</code> edit. Environment variables
+        (<code>deploy/.env</code>) always win, so existing setups keep
+        working. Each populator script accepts <code>--from-prefs</code>
+        to read the saved value.
+      </p>
+
+      <div class="prefs-form" data-api-keys-form>
+        <!-- Rows are rendered by JS so adding a key is a single
+             registry edit on the backend. -->
+      </div>
+
+      <div class="settings-actions">
+        <button type="button" class="btn primary" data-action="save"
+                data-kind="api_keys">Save keys</button>
+        <button type="button" class="btn ghost" data-action="revert"
+                data-kind="api_keys">Revert</button>
+        <span class="settings-status" data-kind="api_keys"></span>
+      </div>
+      <div class="settings-hint">
+        Keys live in the active profile's
+        <code>preferences.json</code>. The Settings UI never echoes a
+        full secret — only the last four characters as confirmation.
+        Leave a field blank to clear it.
+      </div>
+    </section>
+
+    <section class="settings-section" data-kind="news">
+      <h2>News preferences</h2>
+      <p class="desc">
+        Pick a language and add watchlists to rank stories you care about.
+      </p>
+
+      <div class="prefs-form">
+        <div class="pref-row">
+          <label class="primary" for="pref-target-lang">Target language</label>
+          <select id="pref-target-lang" class="pref-target-lang">
+            <option value="en">English</option>
+            <option value="zh">中文 (Chinese)</option>
+          </select>
+        </div>
+
+        <div class="pref-row">
+          <label class="toggle">
+            <input type="checkbox" class="pref-enabled">
+            <span class="track" aria-hidden="true"></span>
+            <span>Enable watchlist boosts</span>
+          </label>
+        </div>
+
+        <details class="pref-group pref-watchlist-tabs">
+          <summary>
+            Watchlists
+            <span class="group-hint">— click to expand</span>
+          </summary>
+          <div class="tab-bar" role="tablist">
+            <button type="button" class="tab active" role="tab"
+                    data-tab="regions" aria-selected="true">
+              Regions <span class="count" data-wl-count="regions">(0)</span>
+            </button>
+            <button type="button" class="tab" role="tab"
+                    data-tab="topics" aria-selected="false">
+              Topics <span class="count" data-wl-count="topics">(0)</span>
+            </button>
+            <button type="button" class="tab" role="tab"
+                    data-tab="events" aria-selected="false">
+              Events <span class="count" data-wl-count="events">(0)</span>
+            </button>
+          </div>
+
+          <div class="tab-pane active" role="tabpanel" data-tab="regions">
+            <div class="pref-rows" data-wl="regions"></div>
+            <div class="template-chips" data-tpl-chips="regions">
+              <span class="label">Quick add:</span>
+            </div>
+            <button type="button" class="btn dashed add-row" data-wl="regions">+ Add blank row</button>
+          </div>
+
+          <div class="tab-pane" role="tabpanel" data-tab="topics" hidden>
+            <div class="pref-rows" data-wl="topics"></div>
+            <div class="template-chips" data-tpl-chips="topics">
+              <span class="label">Quick add:</span>
+            </div>
+            <button type="button" class="btn dashed add-row" data-wl="topics">+ Add blank row</button>
+          </div>
+
+          <div class="tab-pane" role="tabpanel" data-tab="events" hidden>
+            <div class="pref-rows" data-wl="events"></div>
+            <div class="template-chips" data-tpl-chips="events">
+              <span class="label">Quick add:</span>
+            </div>
+            <button type="button" class="btn dashed add-row" data-wl="events">+ Add blank row</button>
+          </div>
+        </details>
+
+        <details class="pref-group pref-ranking">
+          <summary>
+            Ranking knobs
+            <span class="group-hint">— numeric tuning</span>
+          </summary>
+          <div class="pref-knob-grid" data-knob-grid></div>
+          <button type="button" class="btn dashed reset-ranking">Reset to defaults</button>
+        </details>
+
+        <details class="pref-group pref-learned">
+          <summary>
+            Learned keywords
+            <span class="group-hint">— LLM-extracted entities (read-only)</span>
+          </summary>
+          <div class="learned-content" data-learned-content>
+            <div class="pref-empty">No learned keywords yet. Enable the
+              <code>news_keyword_learn</code> feature flag and give the
+              poller a couple of cycles to build a picture.</div>
+          </div>
+        </details>
+
+        <details class="pref-group pref-raw-json">
+          <summary>
+            Raw JSON
+            <span class="group-hint">— read-only preview</span>
+          </summary>
+          <textarea class="settings-editor" data-kind="news"
+                    aria-label="News preferences JSON preview"
+                    spellcheck="false" readonly></textarea>
+        </details>
+      </div>
+
+      <div class="settings-actions">
+        <button type="button" class="btn ghost" data-action="revert" data-kind="news">Revert</button>
+        <span class="settings-status" data-kind="news"></span>
+      </div>
+      <div class="settings-hint">
+        Short keywords (&le; 3 chars) match whole-word only; longer keywords match substring.
+      </div>
+
+      <template id="watchlist-row-template">
+        <div class="watchlist-row">
+          <input type="text" class="wl-label" placeholder="Label" aria-label="Label">
+          <input type="text" class="wl-keywords" placeholder="keyword, another keyword" aria-label="Keywords, comma-separated">
+          <select class="wl-priority" aria-label="Priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+          <label class="toggle wl-enabled">
+            <input type="checkbox" checked>
+            <span class="track" aria-hidden="true"></span>
+          </label>
+          <button type="button" class="btn danger-soft wl-remove" aria-label="Remove row" title="Remove">✕</button>
+        </div>
+      </template>
+    </section>
+
+    <!-- ======================== NOTIFY ======================== -->
+    <section class="settings-section" data-kind="notify">
+      <h2>Notification channels</h2>
+      <p class="desc">
+        Paste your Discord webhook to receive alerts + tracker shocks.
+      </p>
+
+      <div class="prefs-form">
+        <div class="pref-row">
+          <label class="primary" for="notify-discord">Discord webhook</label>
+          <span class="secret-input flex-grow">
+            <input id="notify-discord" class="notify-discord" type="password"
+                   placeholder="https://discord.com/api/webhooks/&lt;id&gt;/&lt;token&gt;"
+                   autocomplete="off" spellcheck="false">
+            <button type="button" class="reveal" data-reveal="notify-discord" aria-label="Press and hold to reveal" title="Press and hold to reveal">👁</button>
+          </span>
+        </div>
+
+        <details class="pref-group pref-raw-json">
+          <summary>
+            Raw JSON
+            <span class="group-hint">— read-only preview</span>
+          </summary>
+          <textarea class="settings-editor" data-kind="notify"
+                    aria-label="Notify preferences JSON preview"
+                    spellcheck="false" readonly></textarea>
+        </details>
+      </div>
+
+      <div class="settings-actions">
+        <button type="button" class="btn ghost" data-action="revert" data-kind="notify">Revert</button>
+        <span class="settings-status" data-kind="notify"></span>
+      </div>
+      <div class="settings-hint">
+        Press and hold the button to peek at the URL. Also requires
+        <code>KARIN_NOTIFICATIONS=true</code>.
+      </div>
+    </section>
+
+    <!-- ======================== TRACKERS ======================== -->
+    <section class="settings-section" data-kind="trackers">
+      <h2>Tracker preferences</h2>
+      <p class="desc">
+        Choose which trackers show on the panel and in what order.
+      </p>
+
+      <div class="prefs-form">
+        <div class="pref-row">
+          <label class="toggle">
+            <input type="checkbox" class="trk-enabled">
+            <span class="track" aria-hidden="true"></span>
+            <span>Apply tracker preferences</span>
+          </label>
+        </div>
+
+        <div class="pref-row">
+          <label class="primary" for="trk-home-state">Home state (US)</label>
+          <select id="trk-home-state" class="trk-home-state">
+            <!-- Populated by JS with US state list -->
+          </select>
+        </div>
+
+        <details class="pref-group">
+          <summary>
+            Categories &amp; trackers
+            <span class="group-hint">— click to expand</span>
+          </summary>
+          <div class="category-order" data-category-order></div>
+        </details>
+
+        <details class="pref-group pref-raw-json">
+          <summary>
+            Raw JSON
+            <span class="group-hint">— read-only preview</span>
+          </summary>
+          <textarea class="settings-editor" data-kind="trackers"
+                    aria-label="Tracker preferences JSON preview"
+                    spellcheck="false" readonly></textarea>
+        </details>
+      </div>
+
+      <div class="settings-actions">
+        <button type="button" class="btn ghost" data-action="revert" data-kind="trackers">Revert</button>
+        <span class="settings-status" data-kind="trackers"></span>
+      </div>
+      <div class="settings-hint">
+        Empty categories never show on the Trackers panel.
+      </div>
+
+    </section>
+
+    <!-- ======================== MEMORY ======================== -->
+    <section class="settings-section" data-kind="memory">
+      <h2>Memory</h2>
+      <p class="desc">
+        Short notes injected into the system prompt so the assistant
+        remembers across conversations. Keep it concise — every character
+        costs context window space.
+      </p>
+
+      <div class="prefs-form">
+        <div class="pref-row" style="flex-direction:column;align-items:stretch;gap:0.3rem">
+          <label class="primary" for="memory-user-field">About you</label>
+          <textarea id="memory-user-field" rows="4"
+                    placeholder="I live in {city}. I work as a {occupation}. I prefer {style} answers."
+                    style="width:100%;font-family:inherit;font-size:0.85rem;padding:0.5rem 0.6rem;border:1px solid var(--ea-accent-strong);border-radius:6px;background:var(--ea-surface);resize:vertical"></textarea>
+          <span class="settings-hint" id="memory-user-count"></span>
+        </div>
+
+        <div class="pref-row" style="flex-direction:column;align-items:stretch;gap:0.3rem;margin-top:0.6rem">
+          <label class="primary" for="memory-agent-field">Assistant instructions</label>
+          <textarea id="memory-agent-field" rows="4"
+                    placeholder="Keep replies {length}. Use a {tone} tone. Always {behavior}."
+                    style="width:100%;font-family:inherit;font-size:0.85rem;padding:0.5rem 0.6rem;border:1px solid var(--ea-accent-strong);border-radius:6px;background:var(--ea-surface);resize:vertical"></textarea>
+          <span class="settings-hint" id="memory-agent-count"></span>
+        </div>
+      </div>
+
+      <div class="settings-actions" style="margin-top:0.6rem">
+        <button type="button" class="btn primary" id="memory-save-btn">Save</button>
+        <span class="settings-status" data-kind="memory"></span>
+      </div>
+    </section>
+
+    <section class="settings-section" data-kind="diagnostics">
+      <h2>Data sources</h2>
+      <p class="desc">
+        Health of the cached datasets behind the inflation, population,
+        and facts tools. Each entry shows the last time its populator
+        ran successfully. Failures here mean the underlying API
+        changed shape or the network was unreachable — re-run the
+        relevant <code>scripts/fetch_*.py</code> to refresh.
+      </p>
+      <div id="diagnostics-summary" class="settings-hint"
+           style="margin-bottom:0.5rem"></div>
+      <div id="diagnostics-list"
+           style="display:flex;flex-direction:column;gap:0.3rem"></div>
+      <div class="settings-actions" style="margin-top:0.6rem">
+        <button type="button" class="btn" id="diagnostics-refresh-btn">Refresh</button>
+        <span class="settings-status" data-kind="diagnostics"></span>
+      </div>
+    </section>
+  </div>
+
+  <script src="/static/panels/_theme_sync.js?v={{ASSET_VERSION}}"></script>
+  <script>
+    // Settings panel — form-driven for all three sections. Each form
+    // serializes into the same JSON shape the server has always
+    // accepted, so the backend is untouched.
+
+    // Local escape helper. settings.html doesn't load panels.js, so
+    // we can't use Panels.escapeHtml. This covers the five HTML-
+    // significant characters — sufficient for attribute values and
+    // text content in our templates.
+    function _esc(s) {
+      if (!s) return "";
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    const ENDPOINTS = {
+      news:     "/api/preferences/news",
+      trackers: "/api/preferences/trackers",
+      notify:   "/api/preferences/notify",
+      location: "/api/preferences/location",
+      api_keys: "/api/preferences/api-keys",
+    };
+
+    // Ranking-knob defaults. Mirrors RankingConfig in
+    // bridge/news/preferences.py; if those change there, change these.
+    const RANKING_DEFAULTS = {
+      region_match_boost: 2.0,
+      topic_match_boost: 1.5,
+      event_match_boost: 2.5,
+      high_priority_multiplier: 1.5,
+      medium_priority_multiplier: 1.2,
+      low_priority_multiplier: 1.0,
+      provisionally_confirmed_bonus: 1.0,
+      confirmed_bonus: 2.0,
+      stale_penalty: 1.0,
+    };
+    const RANKING_LABELS = {
+      region_match_boost: "Region boost",
+      topic_match_boost: "Topic boost",
+      event_match_boost: "Event boost",
+      high_priority_multiplier: "High priority ×",
+      medium_priority_multiplier: "Medium priority ×",
+      low_priority_multiplier: "Low priority ×",
+      provisionally_confirmed_bonus: "Provisional bonus",
+      confirmed_bonus: "Confirmed bonus",
+      stale_penalty: "Stale penalty",
+    };
+
+    // Quick-add templates. Labels are what the user sees; keywords are
+    // sensible starters that can be tweaked per row. A user who doesn't
+    // know what to put in won't face a blank form — they can start
+    // from a working example and edit. Keywords cover the common
+    // phrasings a story might use so substring match picks them up.
+    const WATCHLIST_TEMPLATES = {
+      regions: [
+        // Keywords are intentionally institutional, not personal.
+        // Presidents / prime ministers / party leaders cycle; the
+        // White House, the Kremlin, Samsung, and the LDP don't. This
+        // keeps templates useful across administrations without
+        // needing a refresh every election.
+        { label: "US",             keywords: ["united states", "washington", "white house", "congress", "pentagon"] },
+        // Disambiguated from Taiwan / Hong Kong / Macau so the keyword
+        // list doesn't accidentally trigger on cross-strait stories.
+        { label: "Mainland China", keywords: ["mainland china", "beijing", "prc", "chinese government"] },
+        { label: "Europe",         keywords: ["europe", "eu", "brussels", "european"] },
+        { label: "UK",             keywords: ["united kingdom", "britain", "london", "westminster", "downing street", "parliament"] },
+        { label: "Japan",          keywords: ["japan", "tokyo", "japanese", "diet"] },
+        // Split intentionally — the two Koreas have almost no story
+        // overlap and users usually care about one side, not both.
+        { label: "South Korea",    keywords: ["south korea", "seoul", "rok", "samsung"] },
+        { label: "North Korea",    keywords: ["north korea", "dprk", "pyongyang"] },
+        // "West Asia" is the geographic-neutral term; kept "middle
+        // east" as a keyword because most English-language wires
+        // still label stories that way.
+        { label: "West Asia",      keywords: ["west asia", "middle east", "iran", "israel", "gulf"] },
+      ],
+      topics: [
+        { label: "AI / Tech",   keywords: ["artificial intelligence", "openai", "anthropic", "ai model"] },
+        { label: "Climate",     keywords: ["climate", "emissions", "warming", "carbon"] },
+        { label: "Economy",     keywords: ["inflation", "fed", "recession", "gdp"] },
+        { label: "Geopolitics", keywords: ["sanctions", "diplomacy", "treaty", "alliance"] },
+        { label: "Health",      keywords: ["pandemic", "vaccine", "outbreak", "disease"] },
+        { label: "Space",       keywords: ["spacex", "nasa", "launch", "satellite"] },
+      ],
+      events: [
+        { label: "Elections",   keywords: ["election", "vote", "ballot", "primary"] },
+        { label: "Conflict",    keywords: ["ukraine", "gaza", "war", "strike"] },
+        { label: "Disasters",   keywords: ["earthquake", "hurricane", "flood", "typhoon"] },
+        { label: "Summits",     keywords: ["summit", "g20", "g7", "united nations"] },
+      ],
+    };
+
+    // Label aliases for dedup. The left side (key) is the canonical
+    // identity; each value is a list of strings that should be treated
+    // as the same watchlist row when the Quick-add button checks for
+    // duplicates. Matches are case-insensitive + punctuation-stripped.
+    //
+    // Scoped to high-confidence equivalences. We DO NOT alias
+    // anything that could legitimately mean two different countries:
+    //   - "SA" is skipped (ambiguous between Saudi Arabia and South
+    //     Africa); users type the full name.
+    //   - "Korea" is kept neutral because it's commonly used for
+    //     either half; the stricter forms ("south korea", "rok",
+    //     "dprk") canonicalise to their specific entries.
+    //   - Taiwan / Hong Kong / Macau stay separate from mainland
+    //     China; that disambiguation is the whole reason the
+    //     "China" template was relabeled to "Mainland China".
+    const LABEL_ALIASES = {
+      // Americas
+      us:            ["us", "u.s.", "usa", "u.s.a.", "united states", "united states of america", "america"],
+      canada:        ["canada", "can"],
+      mexico:        ["mexico", "mex", "méxico"],
+      brazil:        ["brazil", "bra", "brasil"],
+      argentina:     ["argentina", "arg"],
+      // Europe
+      europe:        ["europe", "eu", "european union"],
+      uk:            ["uk", "u.k.", "britain", "united kingdom", "great britain", "gbr"],
+      germany:       ["germany", "deu", "deutschland", "frg"],
+      france:        ["france", "fra"],
+      italy:         ["italy", "ita"],
+      spain:         ["spain", "esp", "españa", "espana"],
+      netherlands:   ["netherlands", "nld", "holland"],
+      poland:        ["poland", "pol"],
+      ukraine:       ["ukraine", "ukr"],
+      russia:        ["russia", "rus", "russian federation"],
+      turkey:        ["turkey", "tur", "türkiye", "turkiye"],
+      // East + SE Asia
+      "mainland china": ["mainland china", "prc", "people's republic of china", "peoples republic of china", "china (prc)"],
+      taiwan:        ["taiwan", "roc", "republic of china", "chinese taipei"],
+      "hong kong":   ["hong kong", "hk", "hksar", "hk sar"],
+      macau:         ["macau", "macao", "macao sar"],
+      japan:         ["japan", "jpn", "nippon", "nihon"],
+      "south korea": ["south korea", "rok", "republic of korea", "s korea", "s.korea", "skorea"],
+      "north korea": ["north korea", "dprk", "n korea", "n.korea", "nkorea"],
+      korea:         ["korea", "korean peninsula"],
+      vietnam:       ["vietnam", "vnm", "viet nam"],
+      thailand:      ["thailand", "tha"],
+      philippines:   ["philippines", "phl", "pinas"],
+      indonesia:     ["indonesia", "idn", "republic of indonesia"],
+      malaysia:      ["malaysia", "mys"],
+      singapore:     ["singapore", "sgp"],
+      india:         ["india", "ind", "bharat", "republic of india"],
+      pakistan:      ["pakistan", "pak"],
+      bangladesh:    ["bangladesh", "bgd"],
+      australia:     ["australia", "aus"],
+      "new zealand": ["new zealand", "nzl", "aotearoa"],
+      // West Asia (canonical) — "middle east" kept as an alias so
+      // existing user rows + news wire language still canonicalise
+      // correctly. "MENA" covers Middle East + North Africa shorthand.
+      "west asia": ["west asia", "middle east", "mideast", "mena"],
+      israel:        ["israel", "isr", "state of israel"],
+      palestine:     ["palestine", "palestinian territories", "gaza/west bank"],
+      iran:          ["iran", "irn", "persia", "islamic republic of iran"],
+      iraq:          ["iraq", "irq"],
+      "saudi arabia": ["saudi arabia", "ksa", "kingdom of saudi arabia"],
+      uae:           ["uae", "u.a.e.", "emirates", "united arab emirates"],
+      egypt:         ["egypt", "egy"],
+      // Africa
+      "south africa": ["south africa", "rsa", "republic of south africa"],
+      nigeria:       ["nigeria", "nga"],
+      kenya:         ["kenya", "ken"],
+      ethiopia:      ["ethiopia", "eth"],
+      morocco:       ["morocco", "mar"],
+    };
+
+    function normalizeLabel(s) {
+      return (s || "")
+        .toString()
+        .toLowerCase()
+        .replace(/[.,/]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function canonicalLabel(s) {
+      // Map any known alias to its canonical key; pass through
+      // unrecognised labels unchanged (post-normalization).
+      const n = normalizeLabel(s);
+      for (const [canonical, aliases] of Object.entries(LABEL_ALIASES)) {
+        if (aliases.some((a) => normalizeLabel(a) === n)) return canonical;
+      }
+      return n;
+    }
+
+    const US_STATES = [
+      ["",   "— not set —"],
+      ["AL", "Alabama"],     ["AK", "Alaska"],      ["AZ", "Arizona"],
+      ["AR", "Arkansas"],    ["CA", "California"],  ["CO", "Colorado"],
+      ["CT", "Connecticut"], ["DE", "Delaware"],    ["FL", "Florida"],
+      ["GA", "Georgia"],     ["HI", "Hawaii"],      ["ID", "Idaho"],
+      ["IL", "Illinois"],    ["IN", "Indiana"],     ["IA", "Iowa"],
+      ["KS", "Kansas"],      ["KY", "Kentucky"],    ["LA", "Louisiana"],
+      ["ME", "Maine"],       ["MD", "Maryland"],    ["MA", "Massachusetts"],
+      ["MI", "Michigan"],    ["MN", "Minnesota"],   ["MS", "Mississippi"],
+      ["MO", "Missouri"],    ["MT", "Montana"],     ["NE", "Nebraska"],
+      ["NV", "Nevada"],      ["NH", "New Hampshire"], ["NJ", "New Jersey"],
+      ["NM", "New Mexico"],  ["NY", "New York"],    ["NC", "North Carolina"],
+      ["ND", "North Dakota"],["OH", "Ohio"],        ["OK", "Oklahoma"],
+      ["OR", "Oregon"],      ["PA", "Pennsylvania"],["RI", "Rhode Island"],
+      ["SC", "South Carolina"],["SD", "South Dakota"],["TN", "Tennessee"],
+      ["TX", "Texas"],       ["UT", "Utah"],        ["VT", "Vermont"],
+      ["VA", "Virginia"],    ["WA", "Washington"],  ["WV", "West Virginia"],
+      ["WI", "Wisconsin"],   ["WY", "Wyoming"],
+    ];
+
+    const TRACKER_CATEGORIES = ["metal", "energy", "fx", "food_index", "crypto"];
+    const TRACKER_CATEGORY_LABELS = {
+      metal: "Metal", energy: "Energy", fx: "FX",
+      food_index: "Food index", crypto: "Crypto",
+    };
+
+    const _snapshot = { news: null, trackers: null, notify: null, location: null, api_keys: null };
+
+    // Auto-save state. `_hydrating[kind]` gates the autosave timer so
+    // initial hydration doesn't trigger a POST; `_autoSaveTimer` holds
+    // the pending debounce so repeated edits don't spam the backend.
+    // 600 ms gives enough breathing room for keystrokes while staying
+    // responsive for toggles/drags.
+    const AUTOSAVE_DELAY_MS = 600;
+    const _hydrating = { news: false, notify: false, trackers: false, location: false, api_keys: false };
+    const _autoSaveTimer = { news: null, notify: null, trackers: null };
+
+    function scheduleAutoSave(kind) {
+      if (_hydrating[kind]) return;
+      if (_autoSaveTimer[kind] === undefined) return;  // autosave-only sections
+      if (_autoSaveTimer[kind]) clearTimeout(_autoSaveTimer[kind]);
+      setStatus(kind, "editing…");
+      _autoSaveTimer[kind] = setTimeout(() => {
+        _autoSaveTimer[kind] = null;
+        // Indirected through the table that the click dispatcher
+        // also uses, so adding a new autosaving section is one
+        // _autoSaveTimer entry + one SECTION_HANDLERS entry.
+        SECTION_HANDLERS[kind]?.save?.();
+      }, AUTOSAVE_DELAY_MS);
+    }
+
+    // ----- DOM helpers -------------------------------------------------
+
+    function $kind(selector, kind) {
+      return document.querySelector(`${selector}[data-kind="${kind}"]`);
+    }
+    function $section(kind) {
+      return document.querySelector(`section[data-kind="${kind}"]`);
+    }
+    function setStatus(kind, text, cls) {
+      const el = $kind(".settings-status", kind);
+      el.textContent = text || "";
+      el.className = "settings-status" + (cls ? " " + cls : "");
+    }
+
+    // ----- shared POST -------------------------------------------------
+
+    async function postPrefs(kind, payload) {
+      // Save button was removed in the auto-save rollout; status line
+      // is now the sole signal of save state.
+      setStatus(kind, "saving…");
+      try {
+        const r = await fetch(ENDPOINTS[kind], {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: payload }),
+        });
+        if (!r.ok) {
+          let detail = `HTTP ${r.status}`;
+          try { const j = await r.json(); if (j.detail) detail = j.detail; } catch {}
+          throw new Error(detail);
+        }
+        setStatus(kind, "saved", "ok");
+        return true;
+      } catch (e) {
+        setStatus(kind, "save failed: " + e.message, "error");
+        return false;
+      }
+    }
+
+    // ===================================================================
+    // NEWS
+    // ===================================================================
+
+    function buildRankingGrid() {
+      const grid = $section("news").querySelector("[data-knob-grid]");
+      if (!grid || grid.dataset.built === "1") return;
+      const frag = document.createDocumentFragment();
+      for (const [key, def] of Object.entries(RANKING_DEFAULTS)) {
+        const label = document.createElement("label");
+        const span = document.createElement("span");
+        span.textContent = RANKING_LABELS[key] || key;
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.1";
+        input.min = "0";
+        input.max = "10";
+        input.dataset.knob = key;
+        input.value = String(def);
+        label.appendChild(span);
+        label.appendChild(input);
+        frag.appendChild(label);
+      }
+      grid.appendChild(frag);
+      grid.dataset.built = "1";
+    }
+
+    function buildTemplateChips() {
+      const sec = $section("news");
+      for (const wl of Object.keys(WATCHLIST_TEMPLATES)) {
+        if (sec.querySelector(
+          `.template-chips[data-tpl-chips="${wl}"] .btn`
+        )) continue;
+        const host = sec.querySelector(`.template-chips[data-tpl-chips="${wl}"]`);
+        for (const tpl of WATCHLIST_TEMPLATES[wl]) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "btn chip add-template";
+          btn.dataset.wl = wl;
+          btn.dataset.tpl = tpl.label;
+          btn.textContent = "+ " + tpl.label;
+          btn.title = `Add: ${tpl.keywords.join(", ")}`;
+          host.appendChild(btn);
+        }
+      }
+    }
+
+    function addWatchlistRow(wl, item) {
+      const sec = $section("news");
+      const tpl = sec.querySelector("#watchlist-row-template");
+      const rows = sec.querySelector(`.pref-rows[data-wl="${wl}"]`);
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      node.dataset.wl = wl;
+      if (item) {
+        node.querySelector(".wl-label").value = item.label || item.id || "";
+        node.querySelector(".wl-keywords").value =
+          Array.isArray(item.keywords) ? item.keywords.join(", ") : "";
+        node.querySelector(".wl-priority").value =
+          ["low", "medium", "high"].includes(item.priority) ? item.priority : "medium";
+        node.querySelector(".wl-enabled input").checked = item.enabled !== false;
+      }
+      rows.appendChild(node);
+      updateWatchlistEmptyState(wl);
+      rerenderNewsRawJson();
+    }
+
+    function addWatchlistFromTemplate(wl, templateLabel) {
+      const tpl = (WATCHLIST_TEMPLATES[wl] || []).find(
+        (t) => t.label === templateLabel,
+      );
+      if (!tpl) return;
+      // Alias-aware dedup. "US" / "United States" / "USA" collapse to
+      // one canonical key so the button respects what the user already
+      // has under a different spelling. Without aliasing the prefill
+      // would quietly duplicate rows and confuse later matching.
+      const desired = canonicalLabel(tpl.label);
+      const existing = Array.from(
+        $section("news").querySelectorAll(
+          `.pref-rows[data-wl="${wl}"] .wl-label`
+        )
+      ).map((i) => canonicalLabel(i.value));
+      if (existing.includes(desired)) {
+        // Visible feedback instead of a silent no-op so the user sees
+        // why clicking did nothing.
+        setStatus(
+          "news",
+          `already present: “${tpl.label}” (matches an existing row)`,
+        );
+        return;
+      }
+      addWatchlistRow(wl, { ...tpl, priority: "medium", enabled: true });
+      setStatus("news", `added “${tpl.label}” — remember to Save`, "ok");
+    }
+
+    function removeWatchlistRow(row) {
+      const wl = row.dataset.wl;
+      row.remove();
+      updateWatchlistEmptyState(wl);
+      rerenderNewsRawJson();
+    }
+
+    function updateWatchlistEmptyState(wl) {
+      const sec = $section("news");
+      const rows = sec.querySelector(`.pref-rows[data-wl="${wl}"]`);
+      // Count now lives on the tab label (not a collapsible summary).
+      const countSpan = sec.querySelector(`[data-wl-count="${wl}"]`);
+      const rowCount = rows.querySelectorAll(".watchlist-row").length;
+      if (countSpan) countSpan.textContent = `(${rowCount})`;
+
+      // Empty-state hint: shown only when list is empty, explains what
+      // to do next (click a template or Add blank).
+      const existingEmpty = rows.querySelector(".pref-empty");
+      if (rowCount === 0) {
+        if (!existingEmpty) {
+          const msg = document.createElement("div");
+          msg.className = "pref-empty";
+          msg.textContent = "No " + wl + " yet. Click a template below, or Add a blank row.";
+          rows.appendChild(msg);
+        }
+      } else if (existingEmpty) {
+        existingEmpty.remove();
+      }
+    }
+
+    // Tab switcher for the watchlist section.
+    function activateWatchlistTab(wl) {
+      const sec = $section("news");
+      for (const tab of sec.querySelectorAll(".tab-bar .tab")) {
+        const active = tab.dataset.tab === wl;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", active ? "true" : "false");
+      }
+      for (const pane of sec.querySelectorAll(".tab-pane")) {
+        pane.hidden = pane.dataset.tab !== wl;
+      }
+    }
+
+    function clearWatchlist(wl) {
+      const sec = $section("news");
+      const rows = sec.querySelector(`.pref-rows[data-wl="${wl}"]`);
+      rows.innerHTML = "";
+    }
+
+    function slugify(label) {
+      const s = (label || "")
+        .toString()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+      return s || `item_${Date.now().toString(36)}`;
+    }
+
+    function serializeWatchlist(wl) {
+      const sec = $section("news");
+      const rows = sec.querySelectorAll(
+        `.pref-rows[data-wl="${wl}"] .watchlist-row`
+      );
+      const out = [];
+      for (const row of rows) {
+        const label = row.querySelector(".wl-label").value.trim();
+        const kwRaw = row.querySelector(".wl-keywords").value;
+        const keywords = kwRaw
+          .split(",")
+          .map((k) => k.trim())
+          .filter(Boolean);
+        // Skip rows where both label and keywords are empty — the user
+        // clicked Add then abandoned it.
+        if (!label && keywords.length === 0) continue;
+        out.push({
+          id: slugify(label),
+          label: label || slugify(label),
+          keywords,
+          priority: row.querySelector(".wl-priority").value,
+          enabled: row.querySelector(".wl-enabled input").checked,
+        });
+      }
+      return out;
+    }
+
+    function serializeRanking() {
+      const sec = $section("news");
+      const out = {};
+      for (const key of Object.keys(RANKING_DEFAULTS)) {
+        const input = sec.querySelector(`input[data-knob="${key}"]`);
+        if (!input) continue;
+        const val = parseFloat(input.value);
+        if (!Number.isNaN(val) && Math.abs(val - RANKING_DEFAULTS[key]) > 1e-9) {
+          out[key] = val;
+        }
+      }
+      return out;
+    }
+
+    function serializeNewsForm() {
+      const sec = $section("news");
+      const ranking = serializeRanking();
+      const payload = {
+        target_language: sec.querySelector(".pref-target-lang").value,
+        enabled: sec.querySelector(".pref-enabled").checked,
+        watchlists: {
+          regions: serializeWatchlist("regions"),
+          topics:  serializeWatchlist("topics"),
+          events:  serializeWatchlist("events"),
+        },
+      };
+      if (Object.keys(ranking).length > 0) payload.ranking = ranking;
+      return payload;
+    }
+
+    function hydrateNewsForm(data) {
+      const sec = $section("news");
+      const targetLang = ["en", "zh", "ja", "ko"].includes(data.target_language)
+        ? data.target_language : "en";
+      sec.querySelector(".pref-target-lang").value = targetLang;
+      sec.querySelector(".pref-enabled").checked = !!data.enabled;
+
+      const wls = data.watchlists || {};
+      for (const wl of ["regions", "topics", "events"]) {
+        clearWatchlist(wl);
+        for (const item of wls[wl] || []) addWatchlistRow(wl, item);
+        updateWatchlistEmptyState(wl);
+      }
+
+      const ranking = data.ranking || {};
+      for (const [key, def] of Object.entries(RANKING_DEFAULTS)) {
+        const input = sec.querySelector(`input[data-knob="${key}"]`);
+        if (!input) continue;
+        input.value = String(
+          typeof ranking[key] === "number" ? ranking[key] : def
+        );
+      }
+
+      rerenderNewsRawJson();
+    }
+
+    function rerenderNewsRawJson() {
+      const ta = $section("news").querySelector(
+        '.settings-editor[data-kind="news"]'
+      );
+      if (!ta) return;
+      ta.value = JSON.stringify(serializeNewsForm(), null, 2);
+    }
+
+    // --- learned keywords (Phase E, read-only) -------------------------
+
+    let _learnedLoaded = false;
+
+    async function loadLearnedKeywords(force = false) {
+      if (_learnedLoaded && !force) return;
+      _learnedLoaded = true;
+      const host = $section("news").querySelector("[data-learned-content]");
+      if (!host) return;
+      host.innerHTML = "<div class=\"pref-empty\">Loading…</div>";
+      try {
+        const r = await fetch("/api/news/learned-keywords");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        renderLearnedKeywords(host, data);
+      } catch (e) {
+        host.innerHTML =
+          `<div class="pref-empty">Failed to load learned keywords: ${e.message}</div>`;
+        _learnedLoaded = false;   // allow retry
+      }
+    }
+
+    function renderLearnedKeywords(host, data) {
+      const BUCKETS = [
+        ["regions", "Regions"],
+        ["topics",  "Topics"],
+        ["events",  "Events"],
+      ];
+      const pieces = [];
+      for (const [key, title] of BUCKETS) {
+        const groups = (data && data[key]) || [];
+        if (groups.length === 0) continue;
+        pieces.push(renderBucketBlock(key, title, groups));
+      }
+      if (pieces.length === 0) {
+        host.innerHTML =
+          `<div class="pref-empty">No entities learned yet. The flag may
+           still be off, or the poller hasn't completed a learning cycle.</div>`;
+        return;
+      }
+      host.innerHTML = pieces.join("");
+      wireLearnedEntityClicks(host);
+    }
+
+    function renderBucketBlock(bucketKey, title, groups) {
+      const entityCount = groups.reduce(
+        (sum, g) => sum + (g.entities || []).length, 0,
+      );
+      const groupsHtml = groups.map((g) => `
+        <div class="learned-bucket">
+          <div class="learned-bucket-header">
+            <span>${_esc(g.watchlist_label)}</span>
+            <span class="counts">${(g.entities || []).length} entities</span>
+          </div>
+          <div class="learned-entities">
+            ${(g.entities || []).map(renderLearnedEntity).join("")}
+          </div>
+        </div>
+      `).join("");
+      return `
+        <div class="learned-bucket-group">
+          <div class="learned-bucket-header">
+            <span>${title}</span>
+            <span class="counts">${entityCount} across ${groups.length} label${groups.length === 1 ? "" : "s"}</span>
+          </div>
+          ${groupsHtml}
+        </div>
+      `;
+    }
+
+    function renderLearnedEntity(e) {
+      const label = _esc(e.label || "");
+      const kind = _esc(e.kind || "other");
+      const count = Number.isFinite(e.count) ? e.count : 0;
+      return `<span class="learned-entity" data-entity-label="${label}" data-entity-kind="${kind}">
+        <span>${label}</span>
+        <span class="kind">${kind}</span>
+        <span class="count">&times;${count}</span>
+      </span>`;
+    }
+
+    // --- entity info popup (copy, search, Wikipedia summary) -----------
+
+    function wireLearnedEntityClicks(host) {
+      host.querySelectorAll(".learned-entity").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const label = chip.dataset.entityLabel || "";
+          const kind = chip.dataset.entityKind || "";
+          if (label) openEntityPopup(label, kind);
+        });
+      });
+    }
+
+    async function openEntityPopup(label, kind) {
+      // Close any existing popup first.
+      document.querySelector(".entity-popup-overlay")?.remove();
+
+      const overlay = document.createElement("div");
+      overlay.className = "entity-popup-overlay";
+      overlay.innerHTML = `
+        <div class="entity-popup">
+          <button class="close-btn" title="Close">&times;</button>
+          <h4>${_esc(label)}</h4>
+          <div class="entity-meta">${_esc(kind)}</div>
+          <div class="entity-summary loading">Looking up on Wikipedia...</div>
+          <div class="entity-actions">
+            <button type="button" class="btn ghost" data-action="copy">Copy</button>
+            <a class="btn ghost" href="https://www.google.com/search?q=${encodeURIComponent(label)}"
+               target="_blank" rel="noopener">Google</a>
+            <a class="btn ghost" href="https://en.wikipedia.org/wiki/${encodeURIComponent(label)}"
+               target="_blank" rel="noopener">Wikipedia</a>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      // Close on overlay click or close button.
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay || e.target.closest(".close-btn")) {
+          overlay.remove();
+        }
+      });
+
+      // Copy button.
+      overlay.querySelector('[data-action="copy"]').addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(label);
+          overlay.querySelector('[data-action="copy"]').textContent = "Copied!";
+        } catch {
+          overlay.querySelector('[data-action="copy"]').textContent = "Failed";
+        }
+      });
+
+      // Fetch Wikipedia summary.
+      const summaryEl = overlay.querySelector(".entity-summary");
+      try {
+        const url = "https://en.wikipedia.org/api/rest_v1/page/summary/"
+          + encodeURIComponent(label.replace(/ /g, "_"));
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        if (data.type === "disambiguation") {
+          summaryEl.className = "entity-summary";
+          summaryEl.textContent = `"${label}" has multiple meanings on Wikipedia. Click the Wikipedia link above for the full disambiguation page.`;
+        } else if (data.extract) {
+          summaryEl.className = "entity-summary";
+          summaryEl.textContent = data.extract;
+        } else {
+          summaryEl.className = "entity-summary";
+          summaryEl.textContent = "No summary available.";
+        }
+      } catch {
+        summaryEl.className = "entity-summary";
+        summaryEl.textContent = "Could not fetch Wikipedia summary. Try the links below.";
+      }
+    }
+
+    async function loadNews() {
+      setStatus("news", "loading…");
+      buildRankingGrid();
+      buildTemplateChips();
+      _hydrating.news = true;
+      try {
+        const r = await fetch(ENDPOINTS.news);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const json = await r.json();
+        const body = json && json.data ? json.data : {};
+        _snapshot.news = body;
+        hydrateNewsForm(body);
+        setStatus(
+          "news",
+          Object.keys(body).length ? "loaded" : "no file on disk yet — edits create it",
+        );
+      } catch (e) {
+        setStatus("news", "failed to load: " + e.message, "error");
+      } finally {
+        _hydrating.news = false;
+      }
+      // Fire-and-forget: learned keywords are a read-only diagnostic,
+      // not part of the prefs round-trip. Failure renders an inline
+      // error but doesn't affect the rest of the settings page.
+      loadLearnedKeywords();
+    }
+
+    async function saveNews() {
+      const payload = serializeNewsForm();
+      const ok = await postPrefs("news", payload);
+      if (ok) _snapshot.news = payload;
+    }
+
+    function revertNews() {
+      hydrateNewsForm(_snapshot.news || {});
+      setStatus("news", "reverted to last-loaded state");
+    }
+
+    function resetRanking() {
+      const sec = $section("news");
+      for (const [key, def] of Object.entries(RANKING_DEFAULTS)) {
+        const input = sec.querySelector(`input[data-knob="${key}"]`);
+        if (input) input.value = String(def);
+      }
+      rerenderNewsRawJson();
+    }
+
+    // ===================================================================
+    // NOTIFY
+    // ===================================================================
+
+    function serializeNotifyForm() {
+      const sec = $section("notify");
+      const discord = sec.querySelector(".notify-discord").value.trim();
+      // ntfy.sh is no longer surfaced in the UI (considered abandoned),
+      // but the backend still reads the key — round-trip whatever the
+      // file already had so we don't silently clobber a legacy config.
+      const existing = _snapshot.notify || {};
+      const out = {};
+      if (discord) out.discord_webhook = discord;
+      if (existing.ntfy_topic) out.ntfy_topic = existing.ntfy_topic;
+      return out;
+    }
+
+    function hydrateNotifyForm(data) {
+      const sec = $section("notify");
+      sec.querySelector(".notify-discord").value = data.discord_webhook || "";
+      rerenderNotifyRawJson();
+    }
+
+    function rerenderNotifyRawJson() {
+      const ta = $section("notify").querySelector(
+        '.settings-editor[data-kind="notify"]'
+      );
+      if (!ta) return;
+      // Mask the discord webhook in the preview so a screen-share
+      // doesn't leak it. The real save POSTs the unmasked value.
+      const payload = serializeNotifyForm();
+      const masked = { ...payload };
+      if (masked.discord_webhook && masked.discord_webhook.length > 24) {
+        masked.discord_webhook =
+          masked.discord_webhook.slice(0, 24) + "…(hidden)";
+      }
+      ta.value = JSON.stringify(masked, null, 2);
+    }
+
+    async function loadNotify() {
+      setStatus("notify", "loading…");
+      _hydrating.notify = true;
+      try {
+        const r = await fetch(ENDPOINTS.notify);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const json = await r.json();
+        const body = json && json.data ? json.data : {};
+        _snapshot.notify = body;
+        hydrateNotifyForm(body);
+        setStatus("notify", Object.keys(body).length ? "loaded" : "no channels configured yet");
+      } catch (e) {
+        setStatus("notify", "failed to load: " + e.message, "error");
+      } finally {
+        _hydrating.notify = false;
+      }
+    }
+
+    async function saveNotify() {
+      const payload = serializeNotifyForm();
+      const ok = await postPrefs("notify", payload);
+      if (ok) _snapshot.notify = payload;
+    }
+
+    function revertNotify() {
+      hydrateNotifyForm(_snapshot.notify || {});
+      setStatus("notify", "reverted to last-loaded state");
+    }
+
+    // ===================================================================
+    // LOCATION
+    // ===================================================================
+    //
+    // Reads + writes the active profile's user_location block. Used by
+    // the alerts panel for proximity scoring; an empty block triggers
+    // the "No user_location set" hint over there. Save is explicit
+    // (button) rather than autosave-on-input because a single keystroke
+    // shouldn't fire a POST.
+
+    function hydrateLocationForm(data) {
+      const d = data || {};
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.value = (v == null ? "" : String(v));
+      };
+      set("location-city", d.city);
+      set("location-region", d.region);
+      set("location-country", d.country);
+      set("location-latitude", d.latitude);
+      set("location-longitude", d.longitude);
+    }
+
+    function serializeLocationForm() {
+      const get = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : "";
+      };
+      const out = {};
+      const city = get("location-city");
+      const region = get("location-region");
+      const country = get("location-country");
+      const lat = get("location-latitude");
+      const lon = get("location-longitude");
+      if (city) out.city = city;
+      if (region) out.region = region;
+      if (country) out.country = country;
+      if (lat) out.latitude = parseFloat(lat);
+      if (lon) out.longitude = parseFloat(lon);
+      return out;
+    }
+
+    async function loadLocation() {
+      setStatus("location", "loading…");
+      _hydrating.location = true;
+      try {
+        const r = await fetch(ENDPOINTS.location);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const json = await r.json();
+        const body = json && json.data ? json.data : {};
+        _snapshot.location = body;
+        hydrateLocationForm(body);
+        setStatus(
+          "location",
+          Object.keys(body).length ? "loaded" : "not set yet — alerts proximity will be 0",
+        );
+      } catch (e) {
+        setStatus("location", "failed to load: " + e.message, "error");
+      } finally {
+        _hydrating.location = false;
+      }
+    }
+
+    async function saveLocation() {
+      const payload = serializeLocationForm();
+      const ok = await postPrefs("location", payload);
+      if (ok) _snapshot.location = payload;
+    }
+
+    function revertLocation() {
+      hydrateLocationForm(_snapshot.location || {});
+      setStatus("location", "reverted to last-loaded state");
+    }
+
+    // ===================================================================
+    // OPTIONAL API KEYS
+    // ===================================================================
+    //
+    // Reads + writes the active profile's `api_keys` block. The GET
+    // response gives per-key metadata (set/not, source, last-4 hint)
+    // but never the plaintext secret — once saved, the user can only
+    // overwrite, not read it back. Empty save clears the entry. Save
+    // is explicit (button) since fields contain secrets and should
+    // never autosave on every keystroke.
+
+    function buildApiKeysForm(metaByName) {
+      const host = $section("api_keys").querySelector("[data-api-keys-form]");
+      const names = Object.keys(metaByName || {});
+      if (!names.length) {
+        host.innerHTML =
+          '<div class="empty">No optional API keys are configured ' +
+          'in this build.</div>';
+        return;
+      }
+      const rows = names.map((name) => {
+        const m = metaByName[name];
+        const placeholder = m.set
+          ? (m.source === "environment"
+              ? `set via ${_esc(m.env_var)} (env wins; type a value to override in profile)`
+              : `currently saved (${_esc(m.hint || "value hidden")}) — type to replace, blank to clear`)
+          : "(optional) paste the token here";
+        const status = m.set
+          ? (m.source === "environment"
+              ? `✓ in use via env var <code>${_esc(m.env_var)}</code>`
+              : `✓ saved in profile <span class="muted">(${_esc(m.hint || "value hidden")})</span>`)
+          : '<span class="muted">not set</span>';
+        const link = m.register_url
+          ? ` <a href="${_esc(m.register_url)}" target="_blank" rel="noopener">register</a>`
+          : "";
+        return `
+          <div class="pref-row">
+            <label class="primary" for="api-key-${_esc(name)}">${_esc(m.label || name)}</label>
+            <div class="flex-grow" style="display:flex;flex-direction:column;gap:4px">
+              <input id="api-key-${_esc(name)}" data-api-key="${_esc(name)}"
+                     type="password" autocomplete="off" spellcheck="false"
+                     placeholder="${placeholder}">
+              <small class="settings-hint" style="margin-top:0">
+                ${status}. ${_esc(m.purpose || "")}${link}
+              </small>
+            </div>
+          </div>`;
+      });
+      host.innerHTML = rows.join("");
+      // Mark each input as "untouched" until the user types into it.
+      // serializeApiKeysForm() reads this flag to decide whether to
+      // include the field in the POST — sending nothing for untouched
+      // fields preserves saved values; sending "" for a touched-then-
+      // emptied field clears the saved value (the documented "leave
+      // blank to clear" behaviour).
+      host.querySelectorAll("input[data-api-key]").forEach((el) => {
+        el.dataset.touched = "0";
+        el.addEventListener("input", () => { el.dataset.touched = "1"; });
+      });
+    }
+
+    function hydrateApiKeysForm(metaByName) {
+      buildApiKeysForm(metaByName || {});
+    }
+
+    function serializeApiKeysForm() {
+      const inputs = $section("api_keys").querySelectorAll(
+        "input[data-api-key]",
+      );
+      const out = {};
+      for (const el of inputs) {
+        if (el.dataset.touched === "1") {
+          out[el.dataset.apiKey] = el.value;
+        }
+      }
+      return out;
+    }
+
+    async function loadApiKeys() {
+      setStatus("api_keys", "loading…");
+      _hydrating.api_keys = true;
+      try {
+        const r = await fetch(ENDPOINTS.api_keys);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const json = await r.json();
+        const data = (json && json.data) || {};
+        _snapshot.api_keys = data;
+        hydrateApiKeysForm(data);
+        const setCount = Object.values(data).filter(
+          (m) => m && m.set,
+        ).length;
+        const total = Object.keys(data).length;
+        setStatus(
+          "api_keys",
+          total === 0 ? "no optional keys in this build"
+                      : `${setCount}/${total} configured`,
+        );
+      } catch (e) {
+        // Failure is dead-end without retry — surface a clickable
+        // anchor that re-runs loadApiKeys() so the user can recover
+        // without a full page reload.
+        const el = $kind(".settings-status", "api_keys");
+        el.className = "settings-status error";
+        el.innerHTML = `failed to load: ${_esc(e.message)} — `
+          + `<a href="#" data-action="retry-api-keys">retry</a>`;
+      } finally {
+        _hydrating.api_keys = false;
+      }
+    }
+
+    async function saveApiKeys() {
+      const payload = serializeApiKeysForm();
+      const ok = await postPrefs("api_keys", payload);
+      if (ok) await loadApiKeys();
+    }
+
+    function revertApiKeys() {
+      hydrateApiKeysForm(_snapshot.api_keys || {});
+      setStatus("api_keys", "reverted to last-loaded state");
+    }
+
+    // ===================================================================
+    // TRACKERS
+    // ===================================================================
+
+    function buildHomeStateSelect() {
+      const sel = $section("trackers").querySelector(".trk-home-state");
+      if (sel.dataset.built === "1") return;
+      for (const [code, name] of US_STATES) {
+        const opt = document.createElement("option");
+        opt.value = code;
+        opt.textContent = code ? `${code} — ${name}` : name;
+        sel.appendChild(opt);
+      }
+      sel.dataset.built = "1";
+    }
+
+    // Move a draggable item up or down within its immediate parent.
+    // Works for both cat-block (reorders categories) and trk-item
+    // (reorders trackers inside a category). After a move, stale
+    // hint text is cleared so the "(default)" annotation disappears.
+    function moveOrderItem(item, direction) {
+      const host = item.parentElement;
+      if (direction === "up") {
+        const prev = item.previousElementSibling;
+        if (prev) host.insertBefore(item, prev);
+      } else if (direction === "down") {
+        const next = item.nextElementSibling;
+        if (next) host.insertBefore(next, item);
+      }
+      for (const n of host.querySelectorAll(":scope > * > .hint, :scope > .cat-header > .hint")) {
+        n.textContent = "";
+      }
+      rerenderTrackersRawJson();
+    }
+
+    // --- per-category tracker ordering --------------------------------
+
+    // Catalog arrives from /api/trackers/catalog. Stored once per page
+    // load; re-hydrated on revert. Keys are category ids, values are
+    // lists of {id, label, enabled} in the config-file default order.
+    let _trackerCatalog = {};
+
+    async function loadTrackerCatalog() {
+      try {
+        const r = await fetch("/api/trackers/catalog");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const json = await r.json();
+        _trackerCatalog = (json && json.categories) || {};
+      } catch (e) {
+        // Catalog failure isn't fatal — just means the tracker-
+        // ordering UI renders empty. Surface so the user knows.
+        setStatus("trackers", "tracker catalog unavailable: " + e.message, "error");
+        _trackerCatalog = {};
+      }
+    }
+
+    // Build a toggle switch element wrapping a checkbox. Used for the
+    // per-category and per-tracker enable flips — keeps the UI
+    // consistent with the main News preferences toggles.
+    function _makeToggle(checked, title) {
+      const label = document.createElement("label");
+      label.className = "toggle";
+      label.title = title || "";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!checked;
+      const track = document.createElement("span");
+      track.className = "track";
+      track.setAttribute("aria-hidden", "true");
+      label.append(cb, track);
+      return label;
+    }
+
+    // Unified renderer for the "Category & tracker order" section.
+    // Categories start collapsed to cut visual noise; click the name,
+    // chevron, or counts to expand. Per-category + per-tracker toggles
+    // flip visibility on the Trackers panel (overrides cfg.enabled).
+    function renderCategoryOrder(
+      categoryPriority, trackerOrder, disabledCategories,
+    ) {
+      const sec = $section("trackers");
+      const host = sec.querySelector("[data-category-order]");
+      host.innerHTML = "";
+      trackerOrder = trackerOrder || {};
+      const disabledCats = new Set(disabledCategories || []);
+
+      const stored = (categoryPriority || []).filter((c) =>
+        TRACKER_CATEGORIES.includes(c),
+      );
+      const remaining = TRACKER_CATEGORIES.filter((c) => !stored.includes(c));
+      const orderedCats = [...stored, ...remaining];
+
+      let rendered = 0;
+      for (const cat of orderedCats) {
+        const items = _trackerCatalog[cat] || [];
+        if (items.length === 0) continue;
+
+        const block = document.createElement("div");
+        block.className = "cat-block collapsed";   // default collapsed
+        block.dataset.value = cat;
+        block.draggable = true;
+        const catOff = disabledCats.has(cat);
+        if (catOff) block.classList.add("off");
+
+        const header = document.createElement("div");
+        header.className = "cat-header";
+
+        const handle = document.createElement("span");
+        handle.className = "handle";
+        handle.textContent = "⋮⋮";
+        handle.title = "Drag to reorder";
+
+        const chevron = document.createElement("span");
+        chevron.className = "chevron toggle-collapse";
+        chevron.textContent = "▶";
+        chevron.title = "Expand / collapse";
+
+        const name = document.createElement("span");
+        name.className = "name toggle-collapse";
+        name.textContent = TRACKER_CATEGORY_LABELS[cat] || cat;
+
+        const visibleN = items.filter(
+          (i) => i.visible !== undefined ? i.visible : i.enabled,
+        ).length;
+        const counts = document.createElement("span");
+        counts.className = "counts";
+        counts.textContent = `${visibleN}/${items.length}`;
+
+        const catToggle = _makeToggle(!catOff, "Enable category");
+        catToggle.classList.add("cat-enable");
+
+        const up = document.createElement("button");
+        up.type = "button"; up.className = "btn icon move-up";
+        up.textContent = "↑"; up.title = "Move category up";
+        const down = document.createElement("button");
+        down.type = "button"; down.className = "btn icon move-down";
+        down.textContent = "↓"; down.title = "Move category down";
+
+        header.append(handle, chevron, name, counts, catToggle, up, down);
+        block.appendChild(header);
+
+        // Nested tracker rows.
+        const trackerHost = document.createElement("div");
+        trackerHost.className = "tracker-rows";
+
+        const storedTrackers = (trackerOrder[cat] || []).filter((id) =>
+          items.some((i) => i.id === id),
+        );
+        const remainingTrackers = items
+          .map((i) => i.id)
+          .filter((id) => !storedTrackers.includes(id));
+        const trackerIds = [...storedTrackers, ...remainingTrackers];
+
+        for (const id of trackerIds) {
+          const meta = items.find((i) => i.id === id);
+          if (!meta) continue;
+          const row = document.createElement("div");
+          row.className = "trk-item";
+          row.dataset.value = meta.id;
+          row.draggable = true;
+          const effectiveOn = meta.visible !== undefined ? meta.visible : meta.enabled;
+          if (!effectiveOn) row.classList.add("off");
+
+          const rowHandle = document.createElement("span");
+          rowHandle.className = "handle";
+          rowHandle.textContent = "⋮";
+
+          const rowName = document.createElement("span");
+          rowName.className = "name";
+          rowName.textContent = meta.label;
+
+          const rowHint = document.createElement("span");
+          rowHint.className = "hint";
+          rowHint.textContent = meta.id;
+
+          const rowToggle = _makeToggle(effectiveOn, "Enable tracker");
+          rowToggle.classList.add("trk-enable");
+
+          const rowUp = document.createElement("button");
+          rowUp.type = "button"; rowUp.className = "btn icon move-up";
+          rowUp.textContent = "↑"; rowUp.title = "Move up";
+          const rowDown = document.createElement("button");
+          rowDown.type = "button"; rowDown.className = "btn icon move-down";
+          rowDown.textContent = "↓"; rowDown.title = "Move down";
+
+          row.append(rowHandle, rowName, rowHint, rowToggle, rowUp, rowDown);
+          trackerHost.appendChild(row);
+        }
+        block.appendChild(trackerHost);
+        host.appendChild(block);
+        rendered++;
+      }
+
+      if (rendered === 0) {
+        const empty = document.createElement("div");
+        empty.className = "pref-empty";
+        empty.textContent = "No tracker categories available.";
+        host.appendChild(empty);
+      }
+    }
+
+    // Read the rendered order back out. Emits category_priority as
+    // the block order, and tracker_order as a per-category map — but
+    // only for categories whose tracker order differs from the catalog
+    // default, so the JSON stays minimal.
+    function serializeCategoryAndTrackerOrder() {
+      const host = $section("trackers").querySelector("[data-category-order]");
+      const categoryPriority = [];
+      const trackerOrder = {};
+      const disabledCategories = [];
+      const trackerOverrides = {};
+
+      for (const block of host.querySelectorAll(":scope > .cat-block")) {
+        const cat = block.dataset.value;
+        categoryPriority.push(cat);
+        const catOn = block.querySelector(".cat-enable input").checked;
+        if (!catOn) disabledCategories.push(cat);
+
+        const ids = Array.from(
+          block.querySelectorAll(".tracker-rows > .trk-item"),
+        ).map((n) => n.dataset.value);
+        const defaultIds = (_trackerCatalog[cat] || []).map((i) => i.id);
+        if (
+          ids.length !== defaultIds.length ||
+          ids.some((id, i) => id !== defaultIds[i])
+        ) {
+          trackerOrder[cat] = ids;
+        }
+
+        // Per-tracker overrides: only emit a value when the toggle
+        // state differs from the catalog default. Keeps on-disk JSON
+        // minimal — a user who never touches a toggle gets nothing
+        // persisted for that tracker.
+        for (const row of block.querySelectorAll(".tracker-rows > .trk-item")) {
+          const id = row.dataset.value;
+          const on = row.querySelector(".trk-enable input").checked;
+          const meta = (_trackerCatalog[cat] || []).find((i) => i.id === id);
+          const defaultOn = meta ? !!meta.enabled : true;
+          if (on !== defaultOn) trackerOverrides[id] = on;
+        }
+      }
+      return {
+        categoryPriority, trackerOrder,
+        disabledCategories, trackerOverrides,
+      };
+    }
+
+    function serializeTrackersForm() {
+      const sec = $section("trackers");
+      const {
+        categoryPriority, trackerOrder,
+        disabledCategories, trackerOverrides,
+      } = serializeCategoryAndTrackerOrder();
+      const out = {
+        enabled: sec.querySelector(".trk-enabled").checked,
+        category_priority: categoryPriority,
+      };
+      const homeState = sec.querySelector(".trk-home-state").value;
+      if (homeState) out.home_state = homeState;
+      if (Object.keys(trackerOrder).length > 0) out.tracker_order = trackerOrder;
+      if (disabledCategories.length > 0) out.disabled_categories = disabledCategories;
+      if (Object.keys(trackerOverrides).length > 0) out.tracker_overrides = trackerOverrides;
+      return out;
+    }
+
+    function hydrateTrackersForm(data) {
+      const sec = $section("trackers");
+      sec.querySelector(".trk-enabled").checked = data.enabled !== false;
+      const hs = (data.home_state || "").toString().toUpperCase();
+      sec.querySelector(".trk-home-state").value =
+        hs && US_STATES.some(([c]) => c === hs) ? hs : "";
+      // Apply tracker_overrides + disabled_categories to the catalog
+      // copy before rendering so the toggles reflect current prefs.
+      const overrides = data.tracker_overrides || {};
+      for (const cat of Object.keys(_trackerCatalog)) {
+        for (const item of _trackerCatalog[cat]) {
+          if (Object.prototype.hasOwnProperty.call(overrides, item.id)) {
+            item.visible = !!overrides[item.id];
+          } else if ((data.disabled_categories || []).includes(cat)) {
+            item.visible = false;
+          } else {
+            item.visible = item.enabled;
+          }
+        }
+      }
+      renderCategoryOrder(
+        data.category_priority,
+        data.tracker_order,
+        data.disabled_categories || [],
+      );
+      rerenderTrackersRawJson();
+    }
+
+    function rerenderTrackersRawJson() {
+      const ta = $section("trackers").querySelector(
+        '.settings-editor[data-kind="trackers"]'
+      );
+      if (!ta) return;
+      ta.value = JSON.stringify(serializeTrackersForm(), null, 2);
+    }
+
+    async function loadTrackers() {
+      setStatus("trackers", "loading…");
+      buildHomeStateSelect();
+      _hydrating.trackers = true;
+      // Catalog must be in place before we hydrate, otherwise the
+      // per-category tracker group renders empty. Parallel fetch to
+      // keep the wait bounded — both endpoints are cheap.
+      const [catalog, prefsResp] = await Promise.all([
+        loadTrackerCatalog(),
+        fetch(ENDPOINTS.trackers),
+      ]);
+      try {
+        if (!prefsResp.ok) throw new Error(`HTTP ${prefsResp.status}`);
+        const json = await prefsResp.json();
+        const body = json && json.data ? json.data : {};
+        _snapshot.trackers = body;
+        hydrateTrackersForm(body);
+        setStatus("trackers", Object.keys(body).length ? "loaded" : "using defaults");
+      } catch (e) {
+        setStatus("trackers", "failed to load: " + e.message, "error");
+      } finally {
+        _hydrating.trackers = false;
+      }
+    }
+
+    async function saveTrackers() {
+      const payload = serializeTrackersForm();
+      const ok = await postPrefs("trackers", payload);
+      if (ok) _snapshot.trackers = payload;
+    }
+
+    function revertTrackers() {
+      hydrateTrackersForm(_snapshot.trackers || {});
+      setStatus("trackers", "reverted to last-loaded state");
+    }
+
+    // ----- event wiring ------------------------------------------------
+
+    document.addEventListener("input", (e) => {
+      // Find which section the edit is in, rerender that section's
+      // raw-JSON preview, then schedule an auto-save. Hydration-time
+      // setValue calls don't reach here because they don't dispatch
+      // input events, and the scheduleAutoSave guard also skips when
+      // _hydrating[kind] is true.
+      if (e.target.closest('section[data-kind="news"]')) {
+        rerenderNewsRawJson();
+        scheduleAutoSave("news");
+        return;
+      }
+      if (e.target.closest('section[data-kind="notify"]')) {
+        rerenderNotifyRawJson();
+        scheduleAutoSave("notify");
+        return;
+      }
+      if (e.target.closest('section[data-kind="trackers"]')) {
+        rerenderTrackersRawJson();
+        scheduleAutoSave("trackers");
+      }
+    });
+    document.addEventListener("change", (e) => {
+      // Separate `change` listener picks up dropdown / checkbox flips
+      // that don't fire `input`. Same autosave scheduling rule.
+      if (e.target.closest('section[data-kind="news"]')) {
+        rerenderNewsRawJson();
+        scheduleAutoSave("news");
+        return;
+      }
+      if (e.target.closest('section[data-kind="notify"]')) {
+        rerenderNotifyRawJson();
+        scheduleAutoSave("notify");
+        return;
+      }
+      if (e.target.closest('section[data-kind="trackers"]')) {
+        rerenderTrackersRawJson();
+        scheduleAutoSave("trackers");
+      }
+    });
+
+    // Per-section save/revert handlers, indexed by `data-kind`. Adding
+    // a section is one entry here + a save/revert pair — no edits to
+    // the click dispatcher or the autosave timer below.
+    const SECTION_HANDLERS = {
+      news:     { save: saveNews,     revert: revertNews     },
+      notify:   { save: saveNotify,   revert: revertNotify   },
+      trackers: { save: saveTrackers, revert: revertTrackers },
+      location: { save: saveLocation, revert: revertLocation },
+      api_keys: { save: saveApiKeys,  revert: revertApiKeys  },
+    };
+
+    document.addEventListener("click", (e) => {
+      const saveBtn = e.target.closest("button[data-action='save']");
+      const revertBtn = e.target.closest("button[data-action='revert']");
+      if (saveBtn) {
+        SECTION_HANDLERS[saveBtn.dataset.kind]?.save?.();
+        return;
+      }
+      if (revertBtn) {
+        const kind = revertBtn.dataset.kind;
+        // Cancel any pending autosave before rehydrating — otherwise
+        // the debounce fires right after with the user's reverted
+        // values and performs a redundant POST.
+        if (_autoSaveTimer[kind]) {
+          clearTimeout(_autoSaveTimer[kind]);
+          _autoSaveTimer[kind] = null;
+        }
+        SECTION_HANDLERS[kind]?.revert?.();
+        return;
+      }
+      const retryBtn = e.target.closest("[data-action='retry-api-keys']");
+      if (retryBtn) {
+        e.preventDefault();
+        loadApiKeys();
+        return;
+      }
+
+      // Watchlist tab switch — swap which pane is visible. Tab
+      // state is ephemeral (not persisted); default-opens Regions
+      // on every page load since that's the most-common entry point.
+      const tabBtn = e.target.closest(".tab-bar .tab");
+      if (tabBtn) {
+        activateWatchlistTab(tabBtn.dataset.tab);
+        return;
+      }
+
+      // Clicks that mutate state without firing input/change must
+      // schedule an auto-save themselves — add / remove rows,
+      // template prefill, reset ranking, move up/down.
+      const addBtn = e.target.closest("button.add-row");
+      if (addBtn) {
+        addWatchlistRow(addBtn.dataset.wl);
+        scheduleAutoSave("news");
+        return;
+      }
+
+      const rmBtn = e.target.closest("button.wl-remove");
+      if (rmBtn) {
+        removeWatchlistRow(rmBtn.closest(".watchlist-row"));
+        scheduleAutoSave("news");
+        return;
+      }
+
+      const resetBtn = e.target.closest("button.reset-ranking");
+      if (resetBtn) { resetRanking(); scheduleAutoSave("news"); return; }
+
+      const chipBtn = e.target.closest("button.add-template");
+      if (chipBtn) {
+        addWatchlistFromTemplate(chipBtn.dataset.wl, chipBtn.dataset.tpl);
+        scheduleAutoSave("news");
+        return;
+      }
+
+      // Cat-block + trk-item each have their own move buttons. Pick
+      // the nearest draggable ancestor so the category ↑/↓ and the
+      // tracker ↑/↓ can't collide. Reorder schedules a save.
+      const upBtn = e.target.closest("button.move-up");
+      if (upBtn) {
+        moveOrderItem(upBtn.closest(".cat-block, .trk-item"), "up");
+        scheduleAutoSave("trackers");
+        return;
+      }
+      const downBtn = e.target.closest("button.move-down");
+      if (downBtn) {
+        moveOrderItem(downBtn.closest(".cat-block, .trk-item"), "down");
+        scheduleAutoSave("trackers");
+        return;
+      }
+
+      // Collapse / expand — click chevron or the category name.
+      const toggler = e.target.closest(".toggle-collapse");
+      if (toggler) {
+        const block = toggler.closest(".cat-block");
+        if (block) block.classList.toggle("collapsed");
+        return;
+      }
+    });
+
+    // Recompute the "n/m" header count from live DOM state. n = how
+    // many trackers in this block have their enable toggle on, m =
+    // total. Called after every toggle change so the summary matches
+    // what the user just did, not what was there at load time.
+    function refreshCategoryCount(block) {
+      const rows = block.querySelectorAll(".tracker-rows > .trk-item");
+      let on = 0;
+      rows.forEach((r) => {
+        if (r.querySelector(".trk-enable input").checked) on++;
+      });
+      const counts = block.querySelector(".cat-header .counts");
+      if (counts) counts.textContent = `${on}/${rows.length}`;
+    }
+
+    // Enable toggles: flip the `.off` dim, recompute counts, cascade
+    // parent<->children so the UI matches what users expect from a
+    // group toggle. Listening to `change` (not `click`) so keyboard +
+    // screen reader flips trigger the same handler.
+    //
+    // Cascade rules:
+    //   * category ON  -> children unchanged (individual control)
+    //   * category OFF -> all children OFF (clears any pinned
+    //                     overrides; turning a group off means the
+    //                     whole group is off, full stop)
+    //   * child ON     -> parent ON (the row needs its group visible)
+    //   * child OFF    -> parent unchanged (siblings may still be on)
+    document.addEventListener("change", (e) => {
+      const catEnable = e.target.closest(".cat-enable input");
+      if (catEnable) {
+        const block = catEnable.closest(".cat-block");
+        block.classList.toggle("off", !catEnable.checked);
+        // Category OFF: cascade to children so overrides don't keep
+        // individual trackers visible after the group is hidden.
+        if (!catEnable.checked) {
+          block.querySelectorAll(".trk-enable input").forEach((cb) => {
+            cb.checked = false;
+            cb.closest(".trk-item").classList.add("off");
+          });
+        }
+        refreshCategoryCount(block);
+        rerenderTrackersRawJson();
+        return;
+      }
+      const trkEnable = e.target.closest(".trk-enable input");
+      if (trkEnable) {
+        const row = trkEnable.closest(".trk-item");
+        const block = row.closest(".cat-block");
+        row.classList.toggle("off", !trkEnable.checked);
+
+        // Child ON -> parent ON. Never cascade on OFF — other siblings
+        // may still be on, and auto-disabling the parent would surprise.
+        if (trkEnable.checked) {
+          const catInput = block.querySelector(".cat-enable input");
+          if (!catInput.checked) {
+            catInput.checked = true;
+            block.classList.remove("off");
+          }
+        }
+
+        refreshCategoryCount(block);
+        rerenderTrackersRawJson();
+        return;
+      }
+    });
+
+    // Press-and-hold to reveal a masked secret. Release (or leave the
+    // button) re-masks immediately so bystanders can't glance it
+    // while you move the mouse. Covers mouse + touch + keyboard focus
+    // loss. The eye icon stays put; reveal state is shown via CSS
+    // (accent-colour fill) so we don't rely on a particular font
+    // supporting the crossed-eye glyph variants.
+    function revealTarget(btn, show) {
+      const target = document.getElementById(btn.dataset.reveal);
+      if (!target) return;
+      target.type = show ? "text" : "password";
+      btn.classList.toggle("revealing", show);
+    }
+    document.addEventListener("mousedown", (e) => {
+      const btn = e.target.closest("button.reveal");
+      if (btn) { e.preventDefault(); revealTarget(btn, true); }
+    });
+    document.addEventListener("mouseup", (e) => {
+      const btn = e.target.closest("button.reveal");
+      if (btn) revealTarget(btn, false);
+    });
+    document.addEventListener("mouseleave", (e) => {
+      const btn = e.target.closest && e.target.closest("button.reveal");
+      if (btn) revealTarget(btn, false);
+    }, true);
+    document.addEventListener("touchstart", (e) => {
+      const btn = e.target.closest("button.reveal");
+      if (btn) { e.preventDefault(); revealTarget(btn, true); }
+    }, { passive: false });
+    document.addEventListener("touchend", (e) => {
+      const btn = e.target.closest("button.reveal");
+      if (btn) revealTarget(btn, false);
+    });
+
+    // Drag + drop for the unified category/tracker order. Two
+    // independent selectors (.cat-block, .trk-item) share the same
+    // handler but the dragover check enforces scope: a cat-block can
+    // only swap with sibling cat-blocks; a trk-item can only swap
+    // with sibling trk-items inside the same cat-block. That stops
+    // drags from "teleporting" a tracker into a different category.
+    let _draggedNode = null;
+    let _draggedKind = null;   // "cat" | "trk"
+
+    function _dragKind(el) {
+      if (el.classList.contains("cat-block")) return "cat";
+      if (el.classList.contains("trk-item")) return "trk";
+      return null;
+    }
+
+    document.addEventListener("dragstart", (e) => {
+      const item = e.target.closest(".cat-block, .trk-item");
+      if (!item) return;
+      _draggedNode = item;
+      _draggedKind = _dragKind(item);
+      e.dataTransfer.effectAllowed = "move";
+      item.classList.add("dragging");
+    });
+    document.addEventListener("dragend", () => {
+      if (_draggedNode) _draggedNode.classList.remove("dragging");
+      _draggedNode = null;
+      _draggedKind = null;
+    });
+    document.addEventListener("dragover", (e) => {
+      if (!_draggedNode) return;
+      const target = e.target.closest(".cat-block, .trk-item");
+      if (!target || target === _draggedNode) return;
+      if (_dragKind(target) !== _draggedKind) return;
+      // trk-items only swap with siblings in the same cat-block.
+      if (_draggedKind === "trk" && target.parentElement !== _draggedNode.parentElement) {
+        return;
+      }
+      e.preventDefault();
+      const rect = target.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      const host = target.parentElement;
+      if (e.clientY < midpoint) host.insertBefore(_draggedNode, target);
+      else host.insertBefore(_draggedNode, target.nextElementSibling);
+    });
+    document.addEventListener("drop", (e) => {
+      if (!_draggedNode) return;
+      e.preventDefault();
+      rerenderTrackersRawJson();
+      scheduleAutoSave("trackers");
+    });
+
+    loadNews();
+    loadNotify();
+    loadTrackers();
+    loadLocation();
+    loadApiKeys();
+
+    // ===================================================================
+    // MEMORY
+    // ===================================================================
+
+    const MAX_MEMORY_CHARS = 1000;
+
+    async function loadMemory() {
+      try {
+        const r = await fetch("/api/memory");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        const userField = document.getElementById("memory-user-field");
+        const agentField = document.getElementById("memory-agent-field");
+        if (userField) userField.value = data.user || "";
+        if (agentField) agentField.value = data.agent || "";
+        updateMemoryCount();
+      } catch (e) {
+        setStatus("memory", `failed to load: ${e.message}`, "error");
+      }
+    }
+
+    function updateMemoryCount() {
+      const userField = document.getElementById("memory-user-field");
+      const agentField = document.getElementById("memory-agent-field");
+      const userCount = document.getElementById("memory-user-count");
+      const agentCount = document.getElementById("memory-agent-count");
+      if (userField && userCount) {
+        userCount.textContent = `${userField.value.length} / ${MAX_MEMORY_CHARS}`;
+      }
+      if (agentField && agentCount) {
+        agentCount.textContent = `${agentField.value.length} / ${MAX_MEMORY_CHARS}`;
+      }
+    }
+
+    async function saveMemory() {
+      const userField = document.getElementById("memory-user-field");
+      const agentField = document.getElementById("memory-agent-field");
+      const body = {};
+      if (userField) body.user = userField.value;
+      if (agentField) body.agent = agentField.value;
+      try {
+        const r = await fetch("/api/memory", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        if (userField) userField.value = data.user || "";
+        if (agentField) agentField.value = data.agent || "";
+        updateMemoryCount();
+        const truncated = data.truncated || {};
+        if (truncated.user || truncated.agent) {
+          setStatus("memory", "saved (truncated to fit limit)", "ok");
+        } else {
+          setStatus("memory", "saved", "ok");
+        }
+      } catch (e) {
+        setStatus("memory", `save failed: ${e.message}`, "error");
+      }
+    }
+
+    document.getElementById("memory-save-btn")?.addEventListener("click", saveMemory);
+    document.getElementById("memory-user-field")?.addEventListener("input", updateMemoryCount);
+    document.getElementById("memory-agent-field")?.addEventListener("input", updateMemoryCount);
+    loadMemory();
+
+    // ===================================================================
+    // Data sources diagnostics — surfaces /api/diagnostics/data-sources.
+    // Each entry shows whether the cached dataset behind a tool is
+    // healthy or stale/broken so the user can see what to re-fetch.
+    // ===================================================================
+    function _relativeAge(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      const delta = (Date.now() - d.getTime()) / 1000;
+      if (delta < 60)        return "just now";
+      if (delta < 3600)      return `${Math.round(delta / 60)} minutes ago`;
+      if (delta < 86400)     return `${Math.round(delta / 3600)} hours ago`;
+      if (delta < 86400 * 30) return `${Math.round(delta / 86400)} days ago`;
+      return d.toISOString().slice(0, 10);
+    }
+
+    async function loadDiagnostics() {
+      const summary = document.getElementById("diagnostics-summary");
+      const list = document.getElementById("diagnostics-list");
+      if (!list || !summary) return;
+      setStatus("diagnostics", "loading…", "");
+      list.innerHTML = "";
+      summary.textContent = "";
+      try {
+        const r = await fetch("/api/diagnostics/data-sources");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = await r.json();
+        const sources = d.sources || {};
+        const sum = d.summary || { total: 0, ok: 0, failed: 0 };
+        if (sum.total === 0) {
+          summary.textContent = "No populators have run yet on this server. Run scripts/fetch_*.py to populate.";
+          setStatus("diagnostics", "", "");
+          return;
+        }
+        const sumColor = sum.failed === 0 ? "#10B981" : "#D94F6B";
+        summary.innerHTML = `<span style="color:${sumColor};font-weight:600">${sum.ok}/${sum.total} ok</span>` +
+          (sum.failed > 0 ? ` · <span style="color:#D94F6B">${sum.failed} failed</span>` : "");
+        const sortedKeys = Object.keys(sources).sort();
+        const rows = sortedKeys.map((k) => {
+          const v = sources[k] || {};
+          const ok = !!v.ok;
+          const dot = `<span style="display:inline-block;width:0.55rem;height:0.55rem;border-radius:50%;background:${ok ? "#10B981" : "#D94F6B"}" aria-hidden="true"></span>`;
+          const age = _relativeAge(v.ran_at);
+          const right = ok
+            ? `<span class="settings-hint">${_esc(age)}</span>`
+            : `<span class="settings-hint" style="color:#D94F6B">${_esc((v.error || "failed").slice(0, 100))}</span>`;
+          return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.4rem;border-radius:6px;background:rgba(var(--tint-rgb),0.05);border:1px solid rgba(var(--tint-rgb),0.12)">
+            ${dot}
+            <span style="flex:1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.78rem">${_esc(k)}</span>
+            ${right}
+          </div>`;
+        });
+        list.innerHTML = rows.join("");
+        setStatus("diagnostics", "", "");
+      } catch (e) {
+        setStatus("diagnostics", `load failed: ${e.message}`, "error");
+      }
+    }
+    document.getElementById("diagnostics-refresh-btn")?.addEventListener("click", loadDiagnostics);
+    loadDiagnostics();
+
+    // ===================================================================
+    // Phase H.c: profile picker
+    // ===================================================================
+    //
+    // - GET /api/profiles          -> populate <select>
+    // - POST /api/profiles         -> create a new named profile
+    // - POST /api/profiles/active  -> switch active, show restart banner
+    //
+    // The switch NEVER hot-reloads the page — the other sections on
+    // this page (news/notify/trackers) are still talking to singletons
+    // bound to the prior profile, so a visible banner is the honest
+    // signal. The user restarts the bridge; the next page load reflects
+    // the new profile everywhere.
+
+    async function loadProfiles() {
+      const select = document.getElementById("profile-select");
+      if (!select) return;
+      try {
+        const r = await fetch("/api/profiles");
+        const data = await r.json();
+        select.innerHTML = "";
+        for (const name of (data.profiles || [])) {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          if (name === data.active) opt.selected = true;
+          select.appendChild(opt);
+        }
+        setStatus("profile", data.active ? `active: ${data.active}` : "no profiles");
+      } catch (e) {
+        setStatus("profile", `failed to load profiles: ${e}`, "error");
+      }
+    }
+
+    async function createProfile() {
+      const input = document.getElementById("profile-new-name");
+      const name = (input.value || "").trim();
+      if (!name) {
+        setStatus("profile", "enter a name first", "error");
+        return;
+      }
+      try {
+        const r = await fetch("/api/profiles", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        if (!r.ok) {
+          const detail = await r.json().catch(() => ({}));
+          setStatus("profile", detail.detail || `create failed: ${r.status}`, "error");
+          return;
+        }
+        const body = await r.json();
+        setStatus("profile", `created ${body.name}`, "ok");
+        input.value = "";
+        await loadProfiles();
+      } catch (e) {
+        setStatus("profile", `create failed: ${e}`, "error");
+      }
+    }
+
+    async function switchProfile(name) {
+      try {
+        const r = await fetch("/api/profiles/active", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        if (!r.ok) {
+          const detail = await r.json().catch(() => ({}));
+          setStatus("profile", detail.detail || `switch failed: ${r.status}`, "error");
+          return;
+        }
+        const body = await r.json();
+        setStatus("profile", `active: ${body.active}`, "ok");
+        if (body.restart_required) {
+          document.getElementById("profile-banner").classList.add("visible");
+        }
+      } catch (e) {
+        setStatus("profile", `switch failed: ${e}`, "error");
+      }
+    }
+
+    document.getElementById("profile-create-btn")?.addEventListener("click", createProfile);
+    document.getElementById("profile-select")?.addEventListener("change", (e) => {
+      switchProfile(e.target.value);
+    });
+    document.getElementById("profile-new-name")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        createProfile();
+      }
+    });
+    // Note: loadProfiles() call deferred — Phase H.d chains routing
+    // load onto it (see below).
+
+    // ===================================================================
+    // Phase H.d: IP routing management
+    // ===================================================================
+
+    let _routingEntries = [];
+    let _profileNames = [];
+    let _tailscalePeers = [];
+
+    async function loadRouting() {
+      try {
+        const r = await fetch("/api/profiles/routing");
+        const data = await r.json();
+        _routingEntries = data.entries || [];
+      } catch (e) {
+        _routingEntries = [];
+      }
+      try {
+        const r = await fetch("/api/profiles/routing/peers");
+        const data = await r.json();
+        _tailscalePeers = data.peers || [];
+      } catch (e) {
+        _tailscalePeers = [];
+      }
+      renderRoutingRows();
+      await populateRoutingProfileSelect();
+      populateDeviceSelect();
+    }
+
+    function _routingByIp() {
+      const m = {};
+      for (const e of _routingEntries) m[e.ip] = e;
+      return m;
+    }
+
+    function _peerByIp(ip) {
+      return _tailscalePeers.find((p) => p.ip === ip);
+    }
+
+    function renderRoutingRows() {
+      const container = document.getElementById("ip-routing-rows");
+      if (!container) return;
+      if (_routingEntries.length === 0) {
+        container.innerHTML = '<p style="color:var(--ea-muted);font-size:0.82rem;margin:0.3rem 0">No devices mapped yet. Use the picker below to add one.</p>';
+        return;
+      }
+      const esc = _esc;
+      const profileOpts = _profileNames.map((n) =>
+        `<option value="${esc(n)}">${esc(n)}</option>`
+      ).join("");
+
+      const rows = _routingEntries.map((e) => {
+        const peer = _peerByIp(e.ip);
+        const hostname = peer ? peer.hostname : "";
+        const os = peer ? peer.os : "";
+        const online = peer ? peer.online : null;
+        const dotCls = online === true ? "on" : online === false ? "off" : "";
+        const dot = dotCls ? `<span class="online-dot ${dotCls}"></span>` : "";
+        const deviceLabel = hostname ? `${dot}${esc(hostname)}` : `${dot}${esc(e.ip)}`;
+        const osLabel = os ? ` <span style="color:var(--ea-muted);font-size:0.78rem">(${esc(os)})</span>` : "";
+
+        return `<tr data-ip="${esc(e.ip)}">
+          <td>${deviceLabel}${osLabel}</td>
+          <td class="ip-addr">${esc(e.ip)}</td>
+          <td class="col-nickname">
+            <input type="text" class="nick-edit" value="${esc(e.nickname)}"
+                   placeholder="nickname" maxlength="40">
+          </td>
+          <td class="col-profile">
+            <select class="profile-edit">${profileOpts}</select>
+          </td>
+          <td class="col-actions">
+            <button type="button" class="btn danger-soft btn-remove">Remove</button>
+          </td>
+        </tr>`;
+      }).join("");
+
+      container.innerHTML = `
+        <table class="ip-route-table">
+          <thead><tr>
+            <th>Device</th><th>IP</th><th>Nickname</th><th>Profile</th><th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+
+      // Set selected profile values + wire handlers.
+      container.querySelectorAll("tr[data-ip]").forEach((tr) => {
+        const ip = tr.dataset.ip;
+        const entry = _routingEntries.find((e) => e.ip === ip);
+        if (!entry) return;
+
+        const profileSel = tr.querySelector(".profile-edit");
+        if (profileSel) {
+          profileSel.value = entry.profile;
+          profileSel.addEventListener("change", () => {
+            entry.profile = profileSel.value;
+            saveRouting();
+          });
+        }
+
+        const nickInput = tr.querySelector(".nick-edit");
+        if (nickInput) {
+          nickInput.addEventListener("change", () => {
+            entry.nickname = (nickInput.value || "").trim();
+            saveRouting();
+          });
+        }
+
+        const removeBtn = tr.querySelector(".btn-remove");
+        if (removeBtn) {
+          removeBtn.addEventListener("click", () => removeRoute(ip));
+        }
+      });
+    }
+
+    async function populateRoutingProfileSelect() {
+      const select = document.getElementById("ip-routing-new-profile");
+      if (!select) return;
+      // If _profileNames is empty (race / fetch failure), fetch directly.
+      if (_profileNames.length === 0) {
+        try {
+          const r = await fetch("/api/profiles");
+          const data = await r.json();
+          _profileNames = data.profiles || [];
+        } catch (e) {
+          _profileNames = ["default"];
+        }
+      }
+      select.innerHTML = "";
+      for (const name of _profileNames) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      }
+    }
+
+    async function saveRouting() {
+      try {
+        const r = await fetch("/api/profiles/routing", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ entries: _routingEntries }),
+        });
+        if (!r.ok) {
+          const detail = await r.json().catch(() => ({}));
+          setStatus("iprouting", detail.detail || "save failed", "error");
+          return false;
+        }
+        setStatus("iprouting", "saved", "ok");
+        return true;
+      } catch (e) {
+        setStatus("iprouting", `save failed: ${e}`, "error");
+        return false;
+      }
+    }
+
+    function populateDeviceSelect() {
+      const select = document.getElementById("ip-routing-new-device");
+      if (!select) return;
+      select.innerHTML = '<option value="">-- pick a device --</option>';
+      const byIp = _routingByIp();
+      for (const peer of _tailscalePeers) {
+        const opt = document.createElement("option");
+        opt.value = peer.ip;
+        const status = peer.online ? "online" : "offline";
+        const mapped = byIp[peer.ip];
+        const suffix = mapped ? ` [${mapped.nickname || mapped.profile}]` : "";
+        opt.textContent = `${peer.hostname} (${peer.ip}, ${peer.os}, ${status})${suffix}`;
+        select.appendChild(opt);
+      }
+    }
+
+    async function addRoute() {
+      const deviceSelect = document.getElementById("ip-routing-new-device");
+      const ipInput = document.getElementById("ip-routing-new-ip");
+      const profileSelect = document.getElementById("ip-routing-new-profile");
+      const ip = (deviceSelect?.value || "").trim() || (ipInput?.value || "").trim();
+      const profile = (profileSelect?.value || "").trim();
+      if (!ip) {
+        setStatus("iprouting", "pick a device or enter an IP", "error");
+        return;
+      }
+      if (!profile) {
+        setStatus("iprouting", "select a profile", "error");
+        return;
+      }
+      const peer = _tailscalePeers.find((p) => p.ip === ip);
+      const nickname = peer ? peer.hostname : "";
+      _routingEntries = _routingEntries.filter((e) => e.ip !== ip);
+      _routingEntries.push({ ip, profile, nickname });
+      if (await saveRouting()) {
+        if (deviceSelect) deviceSelect.value = "";
+        if (ipInput) ipInput.value = "";
+        renderRoutingRows();
+        populateDeviceSelect();
+      }
+    }
+
+    async function removeRoute(ip) {
+      _routingEntries = _routingEntries.filter((e) => e.ip !== ip);
+      if (await saveRouting()) {
+        renderRoutingRows();
+        populateDeviceSelect();
+      }
+    }
+
+
+    document.getElementById("ip-routing-add-btn")?.addEventListener("click", addRoute);
+    document.getElementById("ip-routing-new-ip")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addRoute();
+      }
+    });
+
+    // Override loadProfiles to also populate _profileNames for the
+    // routing select. The original loadProfiles runs first; this
+    // chains routing load after it.
+    const _originalLoadProfiles = loadProfiles;
+    loadProfiles = async function() {
+      await _originalLoadProfiles();
+      // Grab the profile list from the select we just populated.
+      const select = document.getElementById("profile-select");
+      _profileNames = [];
+      if (select) {
+        for (const opt of select.options) {
+          _profileNames.push(opt.value);
+        }
+      }
+      await loadRouting();
+    };
+    // Re-run so routing loads too (first call above ran original).
+    loadProfiles();
+  </script>
+</body>
+</html>

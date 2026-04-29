@@ -1,0 +1,105 @@
+{
+  "_about": "Crypto entries (btc_usd, eth_usd) are disabled by default. Flip enabled=true to surface them. With every crypto tracker disabled, the 'Crypto' section never renders on /ui/trackers (the grid groups by category and skips empty buckets). Residential electricity + natural gas require a new EIA fetcher and are not yet wired — see docs/ideas.md.",
+  "enabled": true,
+  "trackers": [
+    {
+      "id": "usd_cny",
+      "label": "USD/CNY",
+      "category": "fx",
+      "source": "frankfurter",
+      "params": {"from": "USD", "to": "CNY"},
+      "cadence": "daily",
+      "stale_after_hours": 72,
+      "history_days": 90,
+      "enabled": true
+    },
+    {
+      "id": "usd_hkd",
+      "label": "USD/HKD",
+      "category": "fx",
+      "source": "frankfurter",
+      "params": {"from": "USD", "to": "HKD"},
+      "cadence": "daily",
+      "stale_after_hours": 72,
+      "history_days": 90,
+      "enabled": true
+    },
+    {
+      "id": "usd_jpy",
+      "label": "USD/JPY",
+      "category": "fx",
+      "source": "frankfurter",
+      "params": {"from": "USD", "to": "JPY"},
+      "cadence": "daily",
+      "stale_after_hours": 72,
+      "history_days": 90,
+      "enabled": true
+    },
+    {
+      "id": "gold_usd",
+      "label": "Gold",
+      "category": "metal",
+      "source": "stooq",
+      "params": {"symbol": "xauusd"},
+      "cadence": "daily",
+      "stale_after_hours": 72,
+      "history_days": 90,
+      "enabled": true
+    },
+    {
+      "id": "gas_retail",
+      "label": "Retail Gasoline (local region)",
+      "category": "energy",
+      "source": "eia",
+      "params": {"duoarea": "${home_state_padd}", "product": "EPMR"},
+      "cadence": "weekly",
+      "stale_after_hours": 192,
+      "history_days": 365,
+      "enabled": true
+    },
+    {
+      "id": "us_cpi_food",
+      "label": "US CPI: Food",
+      "category": "food_index",
+      "source": "bls",
+      "params": {"series_id": "CUUR0000SAF1"},
+      "cadence": "monthly",
+      "stale_after_hours": 960,
+      "history_days": 730,
+      "enabled": true
+    },
+    {
+      "id": "us_cpi_food_at_home",
+      "label": "US CPI: Food at Home",
+      "category": "food_index",
+      "source": "bls",
+      "params": {"series_id": "CUUR0000SAF11"},
+      "cadence": "monthly",
+      "stale_after_hours": 960,
+      "history_days": 730,
+      "enabled": true
+    },
+    {
+      "id": "btc_usd",
+      "label": "Bitcoin",
+      "category": "crypto",
+      "source": "stooq",
+      "params": {"symbol": "btcusd"},
+      "cadence": "daily",
+      "stale_after_hours": 24,
+      "history_days": 90,
+      "enabled": false
+    },
+    {
+      "id": "eth_usd",
+      "label": "Ethereum",
+      "category": "crypto",
+      "source": "stooq",
+      "params": {"symbol": "ethusd"},
+      "cadence": "daily",
+      "stale_after_hours": 24,
+      "history_days": 90,
+      "enabled": false
+    }
+  ]
+}

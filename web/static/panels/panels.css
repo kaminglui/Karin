@@ -1,0 +1,2046 @@
+/* Shared styles for all UI panels (alerts / news / trackers / status).
+ *
+ * Design philosophy: neutral, high-contrast, scannable. Left-border color
+ * on each card carries the "severity" signal so a fast scan down a list
+ * gets you oriented without reading text.
+ *
+ * CSS variables so dark mode is a later flag-flip, not a rewrite.
+ */
+
+/* ---- Theme-matching scrollbars (all panel pages) --------------------
+ *
+ * Panel pages render inside an iframe, so the main app's scrollbar
+ * rules in style.css never reach them. Duplicate those rules here so
+ * /ui/news, /ui/trackers etc. use the same muted purple thumb as the
+ * chat page. Keep the colors in sync with style.css by hand — both
+ * reference the same accent (rgba(var(--tint-rgb), X)) tokens. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--tint-rgb), 0.35) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(var(--tint-rgb), 0.3);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--tint-rgb), 0.55);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+*::-webkit-scrollbar-corner { background: transparent; }
+
+:root {
+  /* Theme tint — propagated from the parent surface via _theme_sync.js
+     when this page is loaded inside the chat iframe. Default to the
+     same purple the chat ships with so direct visits to /ui/X look
+     consistent. Sun-mode characters override this with their tint
+     (e.g. red for Karin's sun avatar). */
+  --tint-rgb: 139, 95, 191;
+
+  /* neutrals */
+  --bg:              #f8fafc;
+  --card-bg:         #ffffff;
+  --border:          #e5e7eb;
+  --text:            #111827;
+  --text-muted:      #6b7280;
+
+  /* severity palette — used by AlertCard left border, state badges, etc. */
+  --sev-critical:    #dc2626;  /* red */
+  --sev-advisory:    #ea580c;  /* orange */
+  --sev-watch:       #d97706;  /* amber */
+  --sev-info:        #2563eb;  /* blue */
+
+  /* news confidence states */
+  --conf-confirmed:  #16a34a;  /* green */
+  --conf-provisional:#0891b2;  /* cyan */
+  --conf-developing: #6b7280;  /* grey */
+  --conf-stale:      #eab308;  /* yellow */
+
+  /* tracker flags */
+  --tracker-surging: #dc2626;
+  --tracker-plunging:#2563eb;
+  --tracker-volatile:#ea580c;
+
+  --chip-bg:         #f3f4f6;
+  --chip-text:       #374151;
+
+  /* Aliases so widget styles ported from the parent's style.css
+     (.infl-*, .facts-*) keep working without rewriting each rule.
+     The parent uses --fg/--muted/--accent; panels use --text/--text-
+     muted/rgb(var(--tint-rgb)). Aliases map old names → panel tokens
+     so the same selectors compose cleanly here. */
+  --fg:              var(--text);
+  --muted:           var(--text-muted);
+  --accent:          rgb(var(--tint-rgb));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:              #0f172a;
+    --card-bg:         #1e293b;
+    --border:          #334155;
+    --text:            #f1f5f9;
+    --text-muted:      #94a3b8;
+    --chip-bg:         #334155;
+    --chip-text:       #e2e8f0;
+  }
+}
+
+/* ---- reset + base ---- */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+  /* Panel-wide non-editable rule: labels, buttons, dropdowns,
+   * headers, decorative copy — none of it is highlightable by
+   * default. Only real text-entry (input / textarea) + contenteditable
+   * opt back in below. Shared across every panel that includes
+   * panels.css so the news / alerts / trackers / digest / settings
+   * pages all behave consistently. */
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+input[type="text"],
+input[type="password"],
+input[type="url"],
+input[type="number"],
+input[type="search"],
+input[type="email"],
+input[type="tel"],
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+select {
+  cursor: pointer;
+}
+
+/* ---- page layout ---- */
+
+.panel-container {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 1.25rem 1.1rem 3rem;
+}
+
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -1.25rem -1.1rem 1.1rem;
+  padding: 1rem 1.1rem;
+  gap: 1rem;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: saturate(140%) blur(12px);
+  -webkit-backdrop-filter: saturate(140%) blur(12px);
+  border-bottom: 1px solid rgba(var(--tint-rgb), 0.18);
+}
+
+.panel-header h1 {
+  font-size: 1.35rem;
+  margin: 0;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.panel-header .subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.panel-actions button,
+.panel-actions .panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid rgba(var(--tint-rgb), 0.28);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.panel-actions button:hover,
+.panel-actions .panel-link:hover {
+  background: rgba(var(--tint-rgb), 0.08);
+  border-color: rgba(var(--tint-rgb), 0.5);
+}
+
+.panel-actions button:active {
+  transform: translateY(1px);
+}
+
+/* ---- generic card ---- */
+
+.card {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  border-radius: 12px;
+  padding: 1rem 1.1rem 0.95rem;
+  margin-bottom: 0.7rem;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--border) 40%, transparent),
+    0 4px 12px -8px rgba(15, 23, 42, 0.08);
+  transition: transform 140ms ease, box-shadow 140ms ease,
+              border-color 140ms ease;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--border) 50%, transparent),
+    0 8px 24px -10px rgba(15, 23, 42, 0.14);
+}
+
+.card h3 {
+  font-size: 1.02rem;
+  margin: 0.35rem 0 0.5rem;
+  font-weight: 600;
+  line-height: 1.32;
+  letter-spacing: -0.005em;
+}
+
+/* ---- state cards (empty / loading / error) ---- */
+
+.state-card {
+  background: color-mix(in srgb, var(--card-bg) 80%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 12px;
+  padding: 2.4rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.state-card.error {
+  border-color: color-mix(in srgb, var(--sev-critical) 60%, transparent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--sev-critical) 5%, var(--card-bg));
+}
+
+.state-card .state-label {
+  display: inline-block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ---- badges + chips ---- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  color: white;
+  line-height: 1;
+}
+
+.badge.level-critical  { background: var(--sev-critical); }
+.badge.level-advisory  { background: var(--sev-advisory); }
+.badge.level-watch     { background: var(--sev-watch); }
+.badge.level-info      { background: var(--sev-info); }
+
+/* News confidence state badges */
+.badge.state-confirmed   { background: var(--conf-confirmed); }
+.badge.state-provisional { background: var(--conf-provisional); }
+.badge.state-developing  { background: var(--conf-developing); }
+.badge.state-stale       { background: var(--conf-stale); color: #1f2937; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin-right: 0.3rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.3;
+}
+
+.chip.muted {
+  background: transparent;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  padding: 0;
+  margin-right: 0.6rem;
+}
+
+/* ---- card header/footer rows ---- */
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.card-meta time {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+.card-footer {
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ---- alert-specific ---- */
+
+.alert-card {
+  /* Replace the legacy 4px left-border severity stripe with a thin
+     top accent bar that doesn't fight the card's rounded corners.
+     Color is set per severity below. */
+  overflow: hidden;
+}
+
+.alert-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--severity-accent, var(--sev-info));
+  opacity: 0.85;
+}
+
+.alert-card.level-critical  { --severity-accent: var(--sev-critical); }
+.alert-card.level-advisory  { --severity-accent: var(--sev-advisory); }
+.alert-card.level-watch     { --severity-accent: var(--sev-watch); }
+.alert-card.level-info      { --severity-accent: var(--sev-info); }
+
+.alert-card.inactive {
+  opacity: 0.6;
+}
+
+.alert-card.dimmed {
+  opacity: 0.55;
+  transition: opacity 200ms ease;
+}
+
+/* Phase G.c threat chips — five tiers matching the 0-4 rubric in
+   bridge/alerts/threat_llm.py. Two-tone gradient + subtle inner
+   highlight gives them a slight tactile feel without going full
+   skeumorphism. Text stays high-contrast on every tier. */
+.badge.threat-t0 {
+  background: linear-gradient(180deg, #b6bcc6 0%, #9ca3af 100%);
+  color: #1f2937;
+}
+.badge.threat-t1 {
+  background: linear-gradient(180deg, #86909c 0%, #6b7280 100%);
+}
+.badge.threat-t2 {
+  background: linear-gradient(180deg, #facc15 0%, #eab308 100%);
+  color: #1f2937;
+}
+.badge.threat-t3 {
+  background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
+}
+.badge.threat-t4 {
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #dc2626 35%, transparent);
+}
+
+/* Controls strip above the alert list. Holds the dim-threshold <select>
+   and any short inline hint text. Modern pill-shaped container with
+   a frosted-glass treatment so it floats above the cards rather than
+   competing with them. */
+.alerts-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+  padding: 0.5rem 0.85rem;
+  background: rgba(var(--tint-rgb), 0.05);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.alerts-controls label {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.alerts-controls select {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--tint-rgb), 0.3);
+  background: var(--card-bg);
+  color: var(--text);
+  font-family: inherit;
+}
+.alerts-controls-hint {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  margin-left: auto;
+  font-style: italic;
+}
+
+/* Inline hint for missing location config. Yellow soft-info card. */
+.alerts-hint {
+  margin-bottom: 0.85rem;
+  padding: 0.65rem 0.9rem;
+  background: linear-gradient(
+    180deg,
+    rgba(234, 179, 8, 0.14) 0%,
+    rgba(234, 179, 8, 0.08) 100%
+  );
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 10px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+.alerts-hint a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(234, 179, 8, 0.6);
+  text-underline-offset: 2px;
+}
+
+.alert-card .reasoning {
+  margin: 0.45rem 0 0.6rem;
+  padding-left: 1.15rem;
+  color: color-mix(in srgb, var(--text) 88%, var(--text-muted));
+}
+
+.alert-card .reasoning li {
+  margin-bottom: 0.22rem;
+  line-height: 1.45;
+}
+
+.alert-card details {
+  margin-top: 0.55rem;
+  font-size: 0.83rem;
+}
+
+.alert-card details summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  user-select: none;
+  padding: 0.15rem 0;
+  transition: color 120ms ease;
+  list-style: none;
+}
+.alert-card details summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.4rem;
+  transition: transform 140ms ease;
+  font-size: 0.7em;
+}
+.alert-card details[open] summary::before {
+  transform: rotate(90deg);
+}
+.alert-card details summary:hover {
+  color: var(--text);
+}
+.alert-card details summary::-webkit-details-marker {
+  display: none;
+}
+
+.alert-card details pre {
+  margin-top: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  background: color-mix(in srgb, var(--chip-bg) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.74rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.5;
+}
+
+/* ---- news-specific ---- */
+
+/* All / Watched filter tabs above the grid. Watched keeps only
+ * briefs with at least one watchlist match (regions/topics/events).
+ * Client-side filter over the same briefs payload — no extra fetch.
+ *
+ * Underline-tab style: unselected tabs are muted text with no chrome;
+ * the selected tab gets the accent color + a 2 px underline that
+ * sits flush on top of the row's border-bottom. Reads as a proper
+ * tab bar rather than two detached pill buttons. */
+.news-filter {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(var(--tint-rgb), 0.2);
+}
+.news-filter-tab {
+  position: relative;
+  padding: 0.5rem 1rem 0.55rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-muted, #6b7280);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+.news-filter-tab:hover {
+  color: var(--text, #111827);
+}
+.news-filter-tab:focus-visible {
+  outline: 2px solid rgba(var(--tint-rgb), 0.4);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+.news-filter-tab[aria-selected="true"] {
+  color: rgb(var(--tint-rgb));     /* accent — hex of the matching rgba */
+  font-weight: 600;
+}
+.news-filter-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  right: 0.4rem;
+  bottom: -1px;                 /* sits flush over the row border */
+  height: 2px;
+  background: rgb(var(--tint-rgb));
+  border-radius: 1px;
+}
+
+.news-card.state-confirmed   { border-left-color: var(--conf-confirmed); }
+.news-card.state-provisional { border-left-color: var(--conf-provisional); }
+.news-card.state-developing  { border-left-color: var(--conf-developing); }
+
+/* Action popup anchored near a clicked news card. Singleton at
+ * document level so it floats above every card and modal state.
+ * See ActionPopup in panels/news.js for the behavior contract. */
+.news-action-popup {
+  position: fixed;
+  z-index: 2000;
+  min-width: 180px;
+  padding: 0.35rem;
+  background: var(--panel-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.news-action-popup[hidden] { display: none; }
+
+.news-action-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.1;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: var(--text, inherit);
+  cursor: pointer;
+  transition: background 90ms ease;
+}
+.news-action-item:hover,
+.news-action-item:focus-visible {
+  background: rgba(0, 0, 0, 0.06);
+  outline: none;
+}
+.news-action-item:active { background: rgba(0, 0, 0, 0.1); }
+
+/* Ephemeral toast slot at the bottom of the popup — shown after
+ * "Copy title" to confirm the copy succeeded. Auto-closes the
+ * popup after a beat. */
+.news-action-toast {
+  margin-top: 0.25rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.08);
+  border-radius: 4px;
+  text-align: center;
+}
+.news-action-toast[hidden] { display: none; }
+
+.news-card .chips {
+  margin-bottom: 0.4rem;
+}
+
+.news-card .confirmation-line {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+.news-card .time-line {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+  font-style: italic;
+}
+
+.news-card details.reasoning-block {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.news-card details.reasoning-block summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.news-card details.reasoning-block ul.reasoning {
+  margin: 0.4rem 0 0 0;
+  padding-left: 1.2rem;
+  color: var(--text-muted);
+}
+
+/* Watchlist chips: colour-coded by match type so the dominant "why this
+ * matched my prefs" signal is visible in a glance. Keeps the chip row
+ * scan-friendly without requiring tooltips. */
+.chip.watchlist {
+  font-weight: 600;
+}
+.chip.watchlist.region { background: #dbeafe; color: #1e3a8a; }
+.chip.watchlist.topic  { background: #ede9fe; color: #4c1d95; }
+.chip.watchlist.event  { background: #fee2e2; color: #7f1d1d; }
+
+@media (prefers-color-scheme: dark) {
+  .chip.watchlist.region { background: #1e3a8a; color: #dbeafe; }
+  .chip.watchlist.topic  { background: #4c1d95; color: #ede9fe; }
+  .chip.watchlist.event  { background: #7f1d1d; color: #fee2e2; }
+}
+
+/* ---- tracker-specific ---- */
+
+/* Section wrapper — trackers are grouped by category (FX, Energy,
+ * Food & CPI, ...) so visually-related indicators sit together. */
+.trackers-section {
+  margin-bottom: 1.1rem;
+}
+.trackers-section-heading {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.trackers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+/* Card header holds the title + info ⓘ button side-by-side. */
+.tracker-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+.tracker-header h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Scope / location sub-line under the title — "United States (CPI)"
+ * etc. Muted so the big value still dominates visually. */
+.tracker-scope {
+  margin: 0.15rem 0 0.35rem 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ⓘ button — real <button> (not just text) so it's focusable and
+ * has a proper hit target. Clicking opens the info popover. */
+.tracker-info-btn {
+  flex: 0 0 auto;
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 90ms ease, color 90ms ease, border-color 90ms ease;
+}
+.tracker-info-btn:hover,
+.tracker-info-btn:focus-visible {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--fg, inherit);
+  border-color: rgba(0, 0, 0, 0.25);
+  outline: none;
+}
+
+/* Floating popover anchored near the ⓘ button. Fixed-positioned at
+ * document level so it can escape card overflow/scrolling. */
+.tracker-info-popover {
+  position: fixed;
+  z-index: 1500;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  padding: 0.75rem 0.85rem;
+  background: var(--panel-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--fg, #333);
+}
+.tracker-info-popover[hidden] { display: none; }
+.tracker-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.tracker-info-title {
+  font-size: 0.9rem;
+}
+.tracker-info-close {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+}
+.tracker-info-close:hover,
+.tracker-info-close:focus-visible {
+  background: rgba(0, 0, 0, 0.06);
+  outline: none;
+}
+.tracker-info-body {
+  margin: 0;
+  color: var(--text, inherit);
+}
+
+.tracker-card {
+  /* Neutral left border for trackers — category colour coding wasn't
+   * worth the cognitive load; headline + value do the scanning. */
+  border-left-color: var(--border);
+}
+
+/* --- FX interactive card layout ---------------------------------------
+ * Used for category="fx" trackers. The input + reverse button + result
+ * sit on one line; overflow wraps naturally on narrow screens. */
+.tracker-fx .fx-rate-line {
+  font-size: 0.9rem;
+  margin: 0.25rem 0 0.5rem;
+}
+.tracker-fx .fx-rate-line .muted {
+  color: var(--text-muted, #6e5585);
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
+}
+.tracker-fx .fx-convert {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0;
+}
+.tracker-fx .fx-amount {
+  width: 6.5rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  border-radius: 0.35rem;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+.tracker-fx .fx-from-ccy,
+.tracker-fx .fx-to-ccy {
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+.tracker-fx .fx-reverse {
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  color: rgb(var(--tint-rgb));
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.tracker-fx .fx-reverse:hover,
+.tracker-fx .fx-reverse:active {
+  background: rgb(var(--tint-rgb));
+  color: white;
+}
+.tracker-fx .fx-result {
+  min-width: 5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 0.25rem 0.4rem;
+  background: rgba(var(--tint-rgb), 0.08);
+  border-radius: 0.35rem;
+}
+
+.tracker-card h3 {
+  margin: 0 0 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.tracker-card .value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-bottom: 0.15rem;
+}
+
+.tracker-card .value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.tracker-card .unit {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.tracker-card .meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.tracker-card .deltas {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tracker-card .delta-row {
+  display: grid;
+  grid-template-columns: 2rem 1rem 1fr;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-card .delta-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.tracker-card .delta-arrow {
+  text-align: center;
+  font-weight: 600;
+}
+
+.tracker-card .delta-row.up   .delta-arrow { color: #16a34a; }  /* green */
+.tracker-card .delta-row.down .delta-arrow { color: #dc2626; }  /* red */
+.tracker-card .delta-row.flat .delta-arrow,
+.tracker-card .delta-row.empty .delta-arrow { color: var(--text-muted); }
+
+.tracker-card .delta-value.muted { color: var(--text-muted); }
+
+.tracker-card .pills {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.badge.tracker-surging  { background: var(--tracker-surging); }
+.badge.tracker-plunging { background: var(--tracker-plunging); }
+.badge.tracker-volatile { background: var(--tracker-volatile); }
+
+.tracker-card.no-data .no-data-body {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+/* ---- chat layout (UI-5) ---- */
+
+/* Full-viewport height so chat input sits at the bottom naturally. */
+body.chat-layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-layout .panel-container {
+  flex: 0 0 auto;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-layout .panel-area-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+  gap: 0.75rem;
+}
+
+.chat-layout .panel-area-header h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.chat-layout #panel-subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-left: auto;
+}
+
+.chat-layout #panel-dismiss {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.chat-layout #panel-dismiss:hover {
+  background: var(--chip-bg);
+  color: var(--text);
+}
+
+.chat-layout #panel-dismiss[hidden] {
+  display: none;
+}
+
+.chat-layout .panel-area-body {
+  min-height: 60px;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.chat-area {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  max-width: 820px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+#chat-history {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.chat-message {
+  max-width: 85%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.chat-message.user {
+  background: var(--sev-info);
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 2px;
+}
+
+.chat-message.assistant {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  align-self: flex-start;
+  border-bottom-left-radius: 2px;
+}
+
+.chat-message.tool-call {
+  background: transparent;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  align-self: center;
+  border: none;
+  padding: 0.15rem 0;
+}
+
+.chat-message.error {
+  background: var(--sev-critical);
+  color: white;
+  align-self: center;
+}
+
+#chat-form {
+  display: flex;
+  gap: 0.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+#chat-input {
+  flex: 1 1 auto;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+#chat-input:focus {
+  outline: none;
+  border-color: var(--sev-info);
+}
+
+#send-btn {
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+#send-btn:hover:not(:disabled) { background: var(--chip-bg); }
+#send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* --- convert widget -------------------------------------------------
+ * Two visual states: the one-shot "X unit = Y unit" result card and
+ * the interactive calculator with input + dropdowns + reverse button. */
+
+.convert-card {
+  padding: 0.75rem;
+  background: var(--card-bg, rgba(255, 255, 255, 0.5));
+  border: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  border-radius: 0.5rem;
+}
+
+.convert-line {
+  font-size: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+.convert-line .convert-from,
+.convert-line .convert-to {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.convert-line .convert-eq {
+  color: var(--text-muted, #6e5585);
+}
+
+/* Interactive layout: one row of controls, one row for the result,
+ * one tiny row for any error. Wraps on narrow screens. */
+.convert-interactive .convert-controls {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.convert-interactive .convert-value {
+  width: 7rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  border-radius: 0.35rem;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+.convert-interactive select {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  border-radius: 0.35rem;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.7);
+  min-width: 8rem;
+}
+.convert-interactive .convert-reverse {
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  color: rgb(var(--tint-rgb));
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.convert-interactive .convert-reverse:hover,
+.convert-interactive .convert-reverse:active {
+  background: rgb(var(--tint-rgb));
+  color: white;
+}
+.convert-interactive .convert-result-line {
+  margin-top: 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.convert-interactive .convert-result {
+  padding: 0.3rem 0.5rem;
+  background: rgba(var(--tint-rgb), 0.08);
+  border-radius: 0.35rem;
+  display: inline-block;
+}
+.convert-interactive .convert-error {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--error, #a83232);
+}
+
+/* --- news panel extras -----------------------------------------------
+ * The grid wrapping + footer controls for the news panel. Cards
+ * themselves inherit the generic .card styling. */
+
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+.news-card {
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.news-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(var(--tint-rgb), 0.18);
+}
+.news-card:focus-visible {
+  outline: 2px solid rgb(var(--tint-rgb));
+  outline-offset: 2px;
+}
+.news-footer {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.news-more-btn {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  border-radius: 0.4rem;
+  background: var(--card-bg, rgba(255, 255, 255, 0.7));
+  color: var(--text, inherit);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.news-more-btn:not(:disabled):hover {
+  background: var(--chip-bg, rgba(var(--tint-rgb), 0.12));
+}
+.news-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.news-digest-link {
+  color: rgb(var(--tint-rgb));
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.news-digest-link:hover { text-decoration: underline; }
+
+/* --- news detail modal ------------------------------------------------
+ * Full-screen overlay on mobile, centered 90vw card on desktop. TOC
+ * sidebar is sticky so the user can jump between sources while
+ * scrolling long extracted articles. */
+
+.news-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+.news-modal-backdrop.is-open { display: flex; }
+body.modal-open { overflow: hidden; }
+
+.news-modal {
+  background: var(--bg, #f6eefb);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  width: min(95vw, 1100px);
+  height: min(90vh, 900px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.news-modal-header {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.news-modal-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.news-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.5rem;
+  color: var(--text-muted, #6e5585);
+  -webkit-tap-highlight-color: transparent;
+}
+.news-modal-close:hover { color: var(--text, inherit); }
+
+.news-modal-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;   /* allow children to scroll independently */
+}
+
+.news-modal-toc {
+  width: 260px;
+  min-width: 220px;
+  border-right: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  overflow-y: auto;
+  padding: 0.75rem 0.5rem;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 0.85rem;
+}
+.news-modal-toc-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #6e5585);
+  margin: 0 0.35rem 0.5rem;
+}
+.news-modal-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.news-modal-toc-list li { margin-bottom: 0.3rem; }
+.news-modal-toc-list a {
+  display: block;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.35rem;
+  text-decoration: none;
+  color: inherit;
+  border-left: 3px solid transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+.news-modal-toc-list a:hover {
+  background: rgba(var(--tint-rgb), 0.1);
+  border-left-color: rgb(var(--tint-rgb));
+}
+.news-modal-toc-list .toc-source {
+  display: block;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: rgb(var(--tint-rgb));
+  margin-bottom: 0.15rem;
+}
+.news-modal-toc-list .toc-title {
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--text, inherit);
+}
+
+.news-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  scroll-behavior: smooth;
+}
+.article-section {
+  margin-bottom: 1.8rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+}
+.article-section:last-child { border-bottom: none; }
+.article-section h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+.article-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+.article-meta .article-source {
+  font-weight: 600;
+  color: rgb(var(--tint-rgb));
+}
+.article-meta .article-outlink {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted, #6e5585);
+  text-decoration: none;
+}
+.article-meta .article-outlink:hover { text-decoration: underline; }
+.article-body {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+.article-body p {
+  margin: 0 0 0.8rem;
+}
+.article-body-fallback { color: var(--text-muted, #6e5585); }
+.news-modal-error, .news-modal-empty {
+  padding: 1.5rem;
+  color: var(--text-muted, #6e5585);
+  font-style: italic;
+}
+
+/* Mobile: TOC collapses to the top, main scrolls below it. */
+@media (max-width: 720px) {
+  .news-modal { height: 100vh; width: 100vw; border-radius: 0; }
+  .news-modal-body { flex-direction: column; }
+  .news-modal-toc {
+    width: auto;
+    max-height: 35vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border, rgba(75, 40, 115, 0.15));
+  }
+}
+
+/* ===================================================================
+ * Widget styles ported from style.css so panel iframes can render
+ * .infl-* and .facts-* widgets without linking the parent stylesheet.
+ * The parent's index.html still has its own copy of these rules in
+ * style.css for chat-embedded widgets. Keep the two in sync if either
+ * is updated.
+ * =================================================================== */
+
+/* ---- Inflation widget ---- */
+
+.infl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.1rem 0 0.4rem;
+}
+
+.infl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.5rem;
+}
+
+.infl-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: rgba(var(--tint-rgb), 0.06);
+  border: 1px solid rgba(var(--tint-rgb), 0.18);
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  min-width: 0;
+}
+
+.infl-metric-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.infl-metric-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 0.15rem;
+  word-break: break-word;
+}
+
+.infl-metric-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+.infl-interp {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.35;
+  padding: 0.05rem 0.1rem;
+}
+
+.infl-wages-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.infl-source {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.infl-source a {
+  color: rgb(var(--tint-rgb));
+  text-decoration: none;
+}
+
+.infl-source a:hover {
+  text-decoration: underline;
+}
+
+.infl-plot {
+  width: 100%;
+  height: 280px;
+}
+
+/* ---- Facts widget ---- */
+
+.facts-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: rgba(var(--tint-rgb), 0.04);
+  border: 1px solid rgba(var(--tint-rgb), 0.14);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+}
+
+.facts-items-title {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The list itself is a 4-column grid: label / price / multiplier / unit.
+ * Each <li> uses `display: contents` so its child spans participate in
+ * the grid directly — that's what makes the price column line up
+ * vertically across rows instead of floating with each label's length. */
+.facts-items-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: max-content max-content max-content auto;
+  column-gap: 1rem;
+  row-gap: 0.2rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.facts-items-list li {
+  display: contents;
+}
+
+.facts-item-label {
+  white-space: nowrap;
+}
+
+.facts-item-price {
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--tint-rgb));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.facts-item-mult {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(var(--tint-rgb), 0.1);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  justify-self: start;
+}
+
+/* When there's no now-year comparison the multiplier span is empty —
+ * suppress the pill chrome so the grid cell looks blank, not like an
+ * empty badge. */
+.facts-item-mult:empty {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.facts-item-unit {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Mobile: collapse to two rows per item (label + price/mult/unit on
+ * the next row) so the grid doesn't force horizontal scrolling on
+ * narrow screens. */
+@media (max-width: 480px) {
+  .facts-items-list {
+    grid-template-columns: 1fr;
+    row-gap: 0.4rem;
+  }
+  .facts-items-list li {
+    display: grid;
+    grid-template-columns: max-content max-content auto;
+    column-gap: 0.5rem;
+    align-items: baseline;
+  }
+  .facts-item-label {
+    grid-column: 1 / -1;
+    font-weight: 600;
+  }
+}
+
+.facts-wiki {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid rgba(var(--tint-rgb), 0.12);
+  margin-bottom: 0.2rem;
+}
+
+.facts-wiki-title {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.facts-wiki-events {
+  list-style: disc;
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.facts-wiki-events li {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+/* ---- Facts page (standalone /ui/facts) ---- */
+
+.facts-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(var(--tint-rgb), 0.06);
+  border: 1px solid rgba(var(--tint-rgb), 0.18);
+  border-radius: 12px;
+}
+
+.facts-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 9rem;
+  min-width: 0;
+}
+
+.facts-control > span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.facts-control input[type="number"],
+.facts-control select {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.facts-control input[type="number"]:focus,
+.facts-control select:focus {
+  outline: none;
+  border-color: rgba(var(--tint-rgb), 0.6);
+  box-shadow: 0 0 0 3px rgba(var(--tint-rgb), 0.15);
+}
+
+.facts-go-btn {
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(180deg,
+    rgba(var(--tint-rgb), 0.75) 0%,
+    rgb(var(--tint-rgb)) 100%);
+  color: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 100ms ease, box-shadow 120ms ease, filter 120ms ease;
+  box-shadow: 0 1px 0 rgba(var(--tint-rgb), 0.3),
+              0 4px 12px -4px rgba(var(--tint-rgb), 0.4);
+  align-self: flex-end;
+}
+.facts-go-btn:hover {
+  filter: brightness(1.06);
+}
+.facts-go-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgba(var(--tint-rgb), 0.3);
+}
+
+.facts-quickpicks {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.facts-quickpicks .chip-btn {
+  padding: 0.32rem 0.7rem;
+  border: 1px solid rgba(var(--tint-rgb), 0.25);
+  border-radius: 999px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 120ms ease, transform 100ms ease;
+}
+.facts-quickpicks .chip-btn:hover {
+  background: rgba(var(--tint-rgb), 0.08);
+  border-color: rgba(var(--tint-rgb), 0.45);
+}
+.facts-quickpicks .chip-btn:active {
+  transform: translateY(1px);
+}
+
+/* Related-estimator link row under the quickpicks (e.g. "View US ALICE
+ * estimate →"). Subtle pill that doesn't compete with the data card
+ * below. */
+.facts-related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.facts-related-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid rgba(var(--tint-rgb), 0.25);
+  border-radius: 999px;
+  background: rgba(var(--tint-rgb), 0.06);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background 100ms ease, border-color 120ms ease, transform 100ms ease;
+}
+.facts-related-link:hover {
+  background: rgba(var(--tint-rgb), 0.12);
+  border-color: rgba(var(--tint-rgb), 0.5);
+}
+.facts-related-link:active {
+  transform: translateY(1px);
+}
+.facts-related-emoji {
+  font-size: 1rem;
+  line-height: 1;
+}
+.facts-related-label {
+  color: rgb(var(--tint-rgb));
+  font-weight: 600;
+}
+
+/* ===================================================================
+ * ALICE panel — survival budget + cross-validation against United for
+ * ALICE published thresholds. Mirrors the facts-controls + facts-items
+ * patterns above but with its own set of selectors for clarity.
+ * =================================================================== */
+
+.alice-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(var(--tint-rgb), 0.06);
+  border: 1px solid rgba(var(--tint-rgb), 0.18);
+  border-radius: 12px;
+}
+
+.alice-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 9rem;
+  min-width: 0;
+}
+
+.alice-control > span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.alice-control select {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.alice-go-btn {
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(180deg,
+    rgba(var(--tint-rgb), 0.75) 0%,
+    rgb(var(--tint-rgb)) 100%);
+  color: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-end;
+  box-shadow: 0 1px 0 rgba(var(--tint-rgb), 0.3),
+              0 4px 12px -4px rgba(var(--tint-rgb), 0.4);
+  transition: filter 120ms ease, transform 100ms ease;
+}
+.alice-go-btn:hover { filter: brightness(1.06); }
+.alice-go-btn:active { transform: translateY(1px); }
+
+.alice-interp {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text);
+  background: rgba(var(--tint-rgb), 0.06);
+  border-left: 3px solid rgba(var(--tint-rgb), 0.35);
+  padding: 0.6rem 0.85rem;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1rem;
+}
+
+.alice-section-title {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 1.2rem 0 0.5rem;
+}
+
+/* 3-column budget grid: label / dollars / hint. <li> uses display:
+ * contents so all rows align across the grid (same trick as the facts
+ * items list). */
+.alice-budget-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  column-gap: 1rem;
+  row-gap: 0.3rem;
+  align-items: baseline;
+  background: rgba(var(--tint-rgb), 0.04);
+  border: 1px solid rgba(var(--tint-rgb), 0.14);
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+
+.alice-budget-list li { display: contents; }
+
+.alice-line-label { color: var(--text); }
+.alice-line-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: rgb(var(--tint-rgb));
+  text-align: right;
+  white-space: nowrap;
+}
+/* Negative tax line (CTC / EITC offset) — green so the user can
+ * see at a glance that the line REDUCES their tax, not adds. */
+.alice-line-value-credit {
+  color: var(--conf-confirmed, #16a34a);
+}
+.alice-line-hint {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.alice-budget-subtotal .alice-line-label,
+.alice-budget-subtotal .alice-line-value {
+  border-top: 1px dashed rgba(var(--tint-rgb), 0.25);
+  padding-top: 0.35rem;
+  font-weight: 600;
+}
+.alice-budget-subtotal .alice-line-hint {
+  border-top: 1px dashed rgba(var(--tint-rgb), 0.25);
+  padding-top: 0.35rem;
+}
+
+.alice-budget-total .alice-line-label,
+.alice-budget-total .alice-line-value,
+.alice-budget-total .alice-line-hint {
+  border-top: 2px solid rgba(var(--tint-rgb), 0.5);
+  padding-top: 0.45rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.alice-budget-total .alice-line-hint {
+  font-weight: 500;
+  font-size: 0.78rem;
+}
+
+/* Scaled-total annotation — surfaces the size-specific threshold when
+ * the user picked a household size other than the 4-person canonical.
+ * Sits between the budget table and the cross-validation block. */
+.alice-scaled-total {
+  margin: 0.6rem 0 0;
+  padding: 0.65rem 0.85rem;
+  background: rgba(var(--tint-rgb), 0.1);
+  border: 1px solid rgba(var(--tint-rgb), 0.28);
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+.alice-scaled-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-weight: 600;
+}
+.alice-scaled-label { color: var(--text); }
+.alice-scaled-value {
+  color: rgb(var(--tint-rgb));
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+}
+.alice-scaled-hint {
+  margin-top: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* Comparison block — 3 cells per row (ours / theirs / delta). */
+.alice-compare {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+.alice-compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.6rem;
+}
+.alice-compare-cell {
+  background: var(--card-bg);
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.alice-compare-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.alice-compare-big {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1.1;
+}
+.alice-compare-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.alice-delta-ok .alice-compare-big {
+  color: var(--conf-confirmed, #16a34a);
+}
+.alice-delta-warn .alice-compare-big {
+  color: var(--sev-advisory, #ea580c);
+}
+
+@media (max-width: 600px) {
+  .alice-compare-row { grid-template-columns: 1fr; }
+  .alice-budget-list { grid-template-columns: max-content max-content; }
+  .alice-line-hint { grid-column: 1 / -1; padding-left: 0; padding-bottom: 0.2rem; }
+}
+
+.alice-checks {
+  margin-top: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(var(--tint-rgb), 0.04);
+  border: 1px dashed rgba(var(--tint-rgb), 0.2);
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+.alice-checks summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-weight: 500;
+  list-style: none;
+}
+.alice-checks summary::-webkit-details-marker { display: none; }
+.alice-checks summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.4rem;
+  transition: transform 140ms ease;
+  font-size: 0.7em;
+}
+.alice-checks[open] summary::before { transform: rotate(90deg); }
+
+.alice-check-row {
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+.alice-check-note {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}

@@ -1,0 +1,37 @@
+[Unit]
+Description=llama.cpp server (replaces Ollama for Karin routing)
+After=network.target
+# Bind to :8080; Karin points config/assistant.yaml::llm.base_url + the
+# KARIN_OLLAMA_BASE_URL env var at http://localhost:8080.
+#
+# Per-deploy customization: change `User=` below to your local Linux
+# user. All filesystem paths resolve via %h (systemd's expansion of the
+# service user's home directory), so you do not need to edit them
+# separately. If your install dir differs from ~/karin_sft or
+# ~/llama.cpp, update the WorkingDirectory / ExecStart paths too.
+
+[Service]
+Type=simple
+User=jetson
+WorkingDirectory=%h/karin_sft
+# Base model is mannix's GGUF blob from Ollama's store (symlinked as mannix.gguf).
+# The Karin LoRA is applied on top with --lora, matching the Ollama Modelfile
+# Option B deploy pattern. Ollama can be stopped or uninstalled independently
+# once this path is stable; the symlink still resolves because the blob file
+# is owned by the `ollama` group and readable by others.
+ExecStart=%h/llama.cpp/build/bin/llama-server \
+    --model %h/karin_sft/mannix.gguf \
+    --lora %h/karin_sft/karin-lora.gguf \
+    --host 127.0.0.1 \
+    --port 8080 \
+    --ctx-size 4096 \
+    --n-gpu-layers 999 \
+    --jinja
+Restart=on-failure
+RestartSec=5
+# TODO: once Ollama is fully removed, copy the blob to
+#   %h/karin_sft/mannix.gguf (not a symlink) so the service
+#   doesn't break when /usr/share/ollama/ is deleted.
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,249 @@
+# Karin runtime configuration.
+# All tunables for the bridge process live here. Paths are resolved
+# relative to the repo root (the directory that contains `bridge/`),
+# not relative to this file. bridge/main.py computes REPO_ROOT from
+# __file__ so it works regardless of CWD.
+
+audio:
+  sample_rate: 16000       # STT/VAD rate. TTS output (32 kHz from v2Pro) uses its own rate.
+  input_device: null        # null = system default. Override with a device-name substring.
+  output_device: null
+  # Mic frame size handed to VAD. Pinned to 32 ms because Silero VAD 5.x
+  # requires exactly 512 samples at 16 kHz (or 256 at 8 kHz) per forward pass
+  # — any other size raises. 32 ms * 16 kHz = 512 samples.
+  frame_ms: 32
+
+vad:
+  backend: silero
+  threshold: 0.5            # Speech probability cutoff. Raise if it triggers on fan noise.
+  min_silence_ms: 700       # Silence required before we consider the user done talking.
+  speech_pad_ms: 200        # Pad utterance edges so words aren't clipped.
+  min_speech_ms: 250        # Drop blips shorter than this (coughs, clicks).
+
+stt:
+  backend: faster-whisper
+  # Default sizing is memory-first for Jetson Orin Nano 8 GB:
+  #   `tiny.en` on CPU uses ~400 MB of unified memory and leaves
+  #   ~600 MB headroom next to karin-tuned (~6.8 GiB). `base.en`
+  #   was the previous default but ate the headroom — RUNBOOK §
+  #   Voice and docs/architecture.md § Memory budget both recommend
+  #   `tiny.en` on Orin Nano.
+  # Bigger boxes with VRAM to spare can flip `device: cuda` +
+  # `compute_type: int8_float16` + `model: small.en` (or even
+  # `medium.en` on a 16 GB card). On Orin Nano that path pushes
+  # total memory over the 7.4 GiB cap — don't unless you've
+  # verified headroom (see docs/architecture.md § Memory budget).
+  # English-only `.en` models are ~10% faster/more accurate on English
+  # but reject non-English input. Use `small` (no suffix) + language: auto
+  # to accept multilingual voice input — Whisper then detects per
+  # utterance and the LLM still replies in English.
+  model: tiny.en            # Orin-Nano-safe default. `base.en` / `small.en` are drop-ins on bigger hardware.
+  device: cpu               # Orin-Nano-safe. Flip to `cuda` only if you have VRAM to spare.
+  compute_type: int8        # CPU path. Use `int8_float16` on CUDA, `float16` on big GPUs.
+  # `en` = English-only. `auto` = Whisper detects per utterance (requires
+  # a non-.en model; bridge.stt will auto-strip .en with a warning).
+  # Any ISO code (ja, es, zh, ...) locks to that language.
+  language: en
+  beam_size: 1              # 1 = latency-first. Bump to 5 for accuracy if needed.
+  vad_filter: false         # We already ran VAD upstream; don't double-filter.
+
+# Which character persona to use. Current deploys use
+# `characters/profile.yaml` as the shared template and fill its
+# placeholders from `characters/<character>/voice.yaml`. Legacy
+# `config/characters/*.yaml` files remain as a fallback path only.
+# Override via env var KARIN_CHARACTER for Docker deployments, or
+# the sidebar dropdown which sets it at runtime via /api/tts/voice.
+# See characters/README.md for the current layout.
+#
+# Ships pointing at `default` — the neutral fallback character that
+# always exists in the repo (characters/default/voice.yaml is the
+# one voice.yaml tracked in git; see .gitignore for the exception).
+# Change this to a name you've trained under characters/<name>/ with
+# voices/ + voice.yaml to make that character the startup default,
+# OR leave it as `default` and pick your trained character from the
+# sidebar dropdown at runtime — the runtime selection persists for
+# the life of the server process via KARIN_CHARACTER.
+character: default
+
+llm:
+  backend: ollama
+  base_url: http://localhost:11434
+  # karin-tuned:latest = mannix abliterated llama3.1-8b base + iter-3 LoRA
+  # adapter (built locally by deploy/setup.sh from `kaminglui/karin-lora`
+  # on HF). Production baseline 93.3% routing / 91.9% reply on the
+  # 135-case eval. Fits on Orin Nano 8 GB; num_ctx dropped to 2048 to
+  # reduce VRAM pressure (~1.5 GB savings). Compaction triggers at 50%
+  # of num_ctx so conversations still flow. To run the stock base
+  # without the LoRA (debugging or hardware that can't run karin-tuned),
+  # set this to `llama3.1:8b` — but expect routing accuracy to drop
+  # ~20 percentage points and the L7-layered runtime patches to be
+  # less effective (they're calibrated against the LoRA's behavior).
+  model: karin-tuned:latest
+  temperature: 0.3
+  num_ctx: 2048
+  # Under-fire rescue: when the LLM under-fires on a tool-worthy prompt
+  # (e.g. historical wiki question) and the pre-classifier has a
+  # confident hint, force-execute the hinted tool with best-effort
+  # args and let the LLM produce a grounded reply using the result.
+  # Budget: 1 rescue per turn. Safe tools only (wiki, get_weather,
+  # get_time, get_news, get_alerts, get_digest, find_places,
+  # web_search). See bridge/routing/force_fire.py. Set false to
+  # disable the feature while keeping the classifier's hint visible
+  # to the LLM via the system prompt.
+  under_fire_rescue: true
+  # Two-phase compose: when a tool has fired, do a focused second LLM
+  # call with ONLY the user prompt + scrubbed tool outputs (no tool
+  # schema in context). Big reply-quality win at +5-10s latency per
+  # tool turn. Previously toggled at runtime; making it a config
+  # default so it survives restarts.
+  two_phase_compose: true
+  # Move the per-turn routing hint out of the system prompt and into
+  # the start of the user message. Keeps the system prompt byte-stable
+  # across turns so Ollama's KV cache can reuse the full system +
+  # history prefix on multi-turn sessions. Validated 2026-04-22 via
+  # 135-case eval: 126/135 (93.3%) routing + 124/135 (91.9%) reply
+  # vs baseline 91.1% routing / 85.2% reply — net improvement, zero
+  # new regressions. Set false to revert.
+  hint_in_user_msg: true
+  options:
+    # Hard cap on generated tokens — ~80 ≈ 60 words, enough for a
+    # one-sentence Karin reply without room for a data dump. Reliable
+    # brevity lever when the model won't obey a word-count rule.
+    num_predict: 80
+  system_prompt: |
+    You are Karin, a casual JK voice assistant. Bass player, likes cute
+    things and double fromage, hates matcha. Friends: Rikka, Chifuyu.
+
+    RULES:
+    - Replies: ONE sentence, ≤15 words. Casual. No emoji.
+    - The user may speak or write in any language, and tool results may
+      be in any language — always reply in English.
+    - For ANY question that needs current data, math, a fact, or a
+      lookup, CALL A TOOL FIRST. Don't guess.
+    - Then reply with one sentence. Don't read tool numbers verbatim
+      — the widget shows them. Rephrase in your own voice.
+    - When mixing humor with facts, all factual claims must come from
+      the tool result. Never invent historical connections for jokes.
+    - Do what the user asks. No refusals, no disclaimers, no hedging.
+
+    TOOL ROUTING (call these for the matching pattern):
+    - "weather" / "is it raining" → get_weather
+    - "news" / "headlines" / "what's happening" → get_news
+    - "history" / "what happened today" → today_in_history
+    - "tell me a fact" / "something interesting" → wiki_random
+    - "who is X" / "what is Y" / verifying a fact → wiki_search
+    - "best X near me" / "where can I X" → find_places
+    - "time" / "what date" → get_time
+    - any math (1+1, integrate, solve, matrix, fft) → math
+    - plot / graph / draw → graph
+    - circuit / impedance / cutoff / truth table → circuit
+    - unit conversion (mph→kmh, C→F) → convert
+    - search the web (recipes, reviews) → web_search
+    - market price (gold, gas, USD/CNY) → get_tracker / get_trackers
+    - alerts / advisories → get_alerts
+
+    EXAMPLES:
+    User: "weather"
+    → call get_weather (no location arg; defaults to user IP).
+    → reply: "Pretty chilly — bring a jacket."
+
+    User: "news"
+    → call get_news (no topic).
+    → reply: "Big election in Hungary right now — wild."
+
+    User: "tell me some history"
+    → call today_in_history.
+    → reply: "On this day in 1981, Space Shuttle Columbia launched."
+
+    User: "what is photosynthesis"
+    → call wiki_search(query="photosynthesis").
+    → reply: "Plants turning sunlight into food, basically."
+
+    User: "2 + 2"
+    → call math(op="evaluate", expression="2+2").
+    → reply: "Four."
+
+    Conversation, jokes, opinions: NO tool. Just answer.
+
+tts:
+  backend: gpt-sovits
+  # Default: localhost (for co-located setups). Override via env var
+  # KARIN_TTS_BASE_URL to point at a remote PC over Tailscale.
+  # See deploy/pc-tts/README.md for the offload setup.
+  base_url: http://localhost:9880
+  endpoint: /tts                     # POST, JSON body.
+  # --- voice selection ---
+  # Active voice name = a character folder name under characters/.
+  # Each character's voice lives at characters/<name>/voices/ (ref.wav,
+  # gpt_model*.ckpt, sovits_model*.pth) with metadata in
+  # characters/<name>/voice.yaml. Switch at runtime via POST /api/tts/voice.
+  voice: general
+  # voice_dir is optional. Leave unset to auto-scan characters/*/voices/
+  # (default). Set to a flat dir (e.g. voice_training) to use the legacy
+  # prefix-based naming convention — only needed if your binaries haven't
+  # been moved into the characters/ layout yet.
+  # voice_dir: voice_training
+  # Fallback paths used when voice auto-discovery fails (e.g. no voice
+  # found, missing voice.yaml). These are relative to the GPT-SoVITS CWD
+  # (third_party/GPT-SoVITS), so ../../characters/... walks up to repo root.
+  ref_audio_path: ../../characters/general/voices/ref.wav
+  prompt_text: ""                    # Transcript of ref_audio_path. Empty = let server infer.
+  prompt_lang: ko
+  text_lang: en
+  gpt_weights_path: ../../characters/general/voices/gpt_model_32.ckpt
+  sovits_weights_path: ../../characters/general/voices/sovits_model_16.pth
+  top_k: 5
+  top_p: 1.0
+  temperature: 0.8
+  speed_factor: 1.0
+  streaming_mode: false               # Kept for compatibility; browser streaming uses bridge/tts.py synthesize_stream().
+  # Remote PC synthesis takes longer than localhost — bump timeout
+  # to avoid premature disconnects over Tailscale.
+  request_timeout: 300
+
+# Network access control.
+# Controls which IPs can reach the API. When the Jetson is only on a
+# Tailscale tailnet, "tailscale" is sufficient (no auth needed). When
+# you expose to the public internet, switch to "off" and add real
+# authentication (tokens/sessions) — the whitelist is the "no auth
+# needed" security layer; turning it off signals that auth must take over.
+#
+# Values:
+#   "tailscale"                    — only 100.64.0.0/10 + localhost (default)
+#   "off"                          — no IP filtering (for public + auth)
+#   ["100.64.0.0/10", "192.168.1.0/24"]  — custom CIDR allowlist
+security:
+  ip_whitelist: tailscale
+
+runtime:
+  log_level: INFO
+  max_utterance_ms: 15000            # Hard cap on a single turn of recording.
+  # Stop TTS playback when the user starts talking. Requires echo cancellation
+  # or speaker ducking to avoid self-triggering — the bridge runs half-duplex
+  # and logs a warning if this is enabled. Set to true once AEC or speaker
+  # ducking is implemented.
+  interrupt_on_speech: false
+
+# User-location override.
+# Injects into the LLM system prompt so Karin can disambiguate "PA",
+# "home", "here" etc. without a network lookup.
+#
+# Why: the free ipapi.co tier rate-limits aggressively and returns a
+# paywall message from shared residential IPs, so IP geolocation fails
+# silently and the model ends up making things up. A static override
+# is robust across restarts, VPN flips, and rate limits.
+#
+# Every field is optional. Fields that are set REPLACE the IP-derived
+# value; missing fields fall back to whatever the IP lookup returns
+# (which may still be empty).
+#
+# Env-var overrides (take precedence over yaml):
+#   KARIN_USER_CITY, KARIN_USER_REGION, KARIN_USER_COUNTRY,
+#   KARIN_USER_TZ, KARIN_USER_LAT, KARIN_USER_LON
+user_location:
+  city: ""
+  region: ""            # state / province
+  country: ""
+  timezone: ""          # IANA tz, e.g. "America/New_York"
+  latitude: null        # float, decimal degrees
+  longitude: null
