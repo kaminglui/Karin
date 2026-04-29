@@ -65,6 +65,25 @@ _LEAK_CASES: list[tuple[str, str]] = [
         "functions-are-header",
         "Sure. The functions are:\n- get_time\n- get_weather\n- wiki",
     ),
+    # System-prompt rule paraphrasing — observed 2026-04-29 on
+    # "Who are you?". Same scrub trigger as the schema cases above.
+    (
+        "rule-paraphrase-tool-call-time",
+        "I'm here to chat with you, as long as it's not tool-call time. "
+        "No greeting placeholders, no factual summaries.",
+    ),
+    (
+        "rule-paraphrase-grab-tools-for-real",
+        "Don't ask me things that need a tool — I'll only grab tools for real.",
+    ),
+    (
+        "rule-paraphrase-texting-friends",
+        "Just reply like we're texting friends, no formal stuff.",
+    ),
+    (
+        "rule-paraphrase-no-factual-summaries",
+        "Just chatting, no factual summaries needed.",
+    ),
 ]
 
 
@@ -166,16 +185,23 @@ def test_leak_marker_pattern_includes_new_shapes() -> None:
     # Word-anchored fragments (whitespace becomes `\s+` in the compiled
     # pattern, so split each phrase and check token presence).
     for required in (
+        # Schema narration (2026-04-28)
         "input",
         "json",
         "representing",
         "functions",
         "description",
         "provided",
+        # System-prompt rule paraphrasing (2026-04-29)
+        "greeting",
+        "factual",
+        "tool",  # also catches "tool-call time" / "tool lookup"
+        "grab",
+        "texting",
     ):
         assert required in pat, (
             f"_PROMPT_LEAK_MARKERS no longer contains {required!r}; "
-            f"schema-leak coverage may have regressed."
+            f"leak coverage may have regressed."
         )
 
 

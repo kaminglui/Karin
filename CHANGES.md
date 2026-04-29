@@ -1,3 +1,37 @@
+# Changes — 2026-04-29 (system-prompt-rule leak scrub)
+
+## New `PROMPT_LEAK_MARKERS` patterns
+
+- **6 new fragments** in `bridge/reply_scrub.py::PROMPT_LEAK_MARKERS`
+  catch the system-prompt-rule paraphrasing leak observed on
+  `Who are you?` — the LoRA echoed back its own rule constraints
+  ("No greeting placeholders, no factual summaries, just reply like
+  we're texting friends. Don't ask me things that need a tool ...
+  I'll only grab tools for real") as if they were its own persona
+  statement. Patterns:
+  `no\s+greeting\s+placeholders?`,
+  `no\s+factual\s+summar(?:y|ies)`,
+  `tool[-\s]call\s+time\b`,
+  `grab\s+tools?\s+for\s+real`,
+  `(?:we'?re|like\s+we'?re)\s+texting\s+friends`,
+  `don'?t\s+ask\s+me\s+things\s+that\s+need\s+a\s+tool`.
+- 4 new parametric leak cases + 1 verified false-positive guard
+  added to `bridge/tests/test_schema_leak_scrub.py` (19 tests
+  total now). Pattern-presence sanity check extended to require
+  `greeting`, `factual`, `tool`, `grab`, `texting` tokens.
+
+## Note on the related persona-identity leak
+
+The same screenshot showed the LoRA emitting `karin`'s persona
+("JK-energy voice assistant") even though the active character is
+`general` (formal "senior advisor" persona). That's a LoRA
+memorization artifact — the iter-3 weights baked the karin persona
+in deeply enough that the runtime layer can't override it without
+retraining. Runtime layer can only scrub the rule paraphrasing;
+character-identity correctness needs an iter-8+ training pass that
+varies the persona during fine-tuning. Tracked but not addressed
+here.
+
 # Changes — 2026-04-29 (robustness pass: indicator fix, http_request, Modelfile pin, dedup)
 
 ## Sidebar STT/TTS indicator now reflects real reachability

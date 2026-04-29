@@ -79,6 +79,20 @@ PROMPT_LEAK_MARKERS = re.compile(
     r"|set\s+of\s+functions\s*,\s*each\s+with"
     r"|the\s+functions\s+are\s*:"
     r"|no\s+description\s+provided"
+    # System-prompt rule paraphrasing. Observed 2026-04-29 on
+    # "Who are you?" producing "I'm Karin... No greeting placeholders,
+    # no factual summaries, just reply like we're texting friends.
+    # Don't ask me things that need a tool ... I'll only grab tools
+    # for real". The LoRA pulled rule text from the system prompt and
+    # emitted it as if it were its own persona statement. Each fragment
+    # below ONLY appears in such a rule-paraphrase shape — real replies
+    # never describe their own constraints in these terms.
+    r"|no\s+greeting\s+placeholders?"
+    r"|no\s+factual\s+summar(?:y|ies)"
+    r"|tool[-\s]call\s+time\b"
+    r"|grab\s+tools?\s+for\s+real"
+    r"|(?:we'?re|like\s+we'?re)\s+texting\s+friends"
+    r"|don'?t\s+ask\s+me\s+things\s+that\s+need\s+a\s+tool"
     r")",
     re.IGNORECASE,
 )
